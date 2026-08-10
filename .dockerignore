@@ -1,0 +1,10 @@
+node_modules
+dist
+*.db
+*.db-journal
+.git
+.github
+.idea
+.claude
+Dockerfile
+docker-compose.yml

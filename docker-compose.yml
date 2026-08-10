@@ -1,0 +1,17 @@
+services:
+  r0ute:
+    build: .
+    restart: unless-stopped
+    devices:
+      - "/dev/ttyUSB0:/dev/ttyUSB0"
+    group_add:
+      - dialout
+    environment:
+      DEVICE: /dev/ttyUSB0
+      DB_PATH: /data/r0ute.db
+      LOG_LEVEL: info
+    volumes:
+      - r0ute-data:/data
+
+volumes:
+  r0ute-data:
