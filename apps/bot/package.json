@@ -1,0 +1,26 @@
+{
+  "name": "@r0ute/bot",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx src/index.ts",
+    "start": "tsx src/index.ts",
+    "lint": "biome check .",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@liamcottle/meshcore.js": "github:moonthug/meshcore.js",
+    "@r0ute/database": "workspace:*",
+    "@turf/turf": "^7.4.0",
+    "pino": "^10.3.1",
+    "tsx": "^4.23.12"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.5.8",
+    "@r0ute/biome-config": "workspace:*",
+    "@r0ute/tsconfig": "workspace:*",
+    "@types/liamcottle__meshcore.js": "^1.10.0",
+    "typescript": "^7.0.2"
+  }
+}

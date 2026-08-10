@@ -1,0 +1,54 @@
+# production deployment using the images CI pushes to GHCR
+#
+#   docker compose -f docker-compose.prod.yml up -d
+#
+# replace <owner> with the github owner of this repo (images are pushed to
+# ghcr.io/<owner>/r0ute/{bot,web} by .github/workflows/ci.yml)
+services:
+  bot:
+    image: ghcr.io/<owner>/r0ute/bot:latest
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    devices:
+      - "/dev/ttyUSB0:/dev/ttyUSB0"
+    # lets the non-root `node` user open the serial device
+    group_add:
+      - dialout
+    environment:
+      DEVICE: /dev/ttyUSB0
+      DATABASE_URL: postgresql://r0ute:${POSTGRES_PASSWORD:-r0ute}@postgres:5432/r0ute
+      LOG_LEVEL: info
+
+  web:
+    image: ghcr.io/<owner>/r0ute/web:latest
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      # the bot applies database migrations on startup
+      bot:
+        condition: service_started
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: postgresql://r0ute:${POSTGRES_PASSWORD:-r0ute}@postgres:5432/r0ute
+
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: r0ute
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-r0ute}
+      POSTGRES_DB: r0ute
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U r0ute -d r0ute"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  postgres-data:

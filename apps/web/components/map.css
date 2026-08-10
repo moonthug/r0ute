@@ -1,0 +1,51 @@
+/* Leaflet renders markers as SVG paths outside any React-scoped stylesheet, and
+   a CircleMarker's className is only applied at mount (leaflet#2662) — the map
+   remounts a marker with `pulse` to replay this animation. */
+
+.node-marker.pulse {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: node-pulse 1.2s ease-out 3;
+}
+
+/* Direction arrows on message routes. The double class beats leaflet's own
+   .leaflet-marker-icon rule regardless of stylesheet order, so a click always
+   reaches the node marker underneath rather than the arrow sitting on it. */
+
+.leaflet-marker-icon.route-arrow {
+  pointer-events: none;
+  background: none;
+  border: none;
+}
+
+.route-arrow svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.route-arrow path {
+  fill: #f97316;
+  stroke: #ffffff;
+  stroke-width: 2.5;
+  stroke-linejoin: round;
+  /* stroke first so it reads as a halo behind the arrow, not a thick outline */
+  paint-order: stroke;
+}
+
+@keyframes node-pulse {
+  0% {
+    transform: scale(1);
+    stroke-opacity: 1;
+  }
+
+  50% {
+    transform: scale(1.8);
+  }
+
+  100% {
+    transform: scale(1);
+    stroke-opacity: 0.3;
+  }
+}

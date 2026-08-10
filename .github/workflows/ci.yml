@@ -6,12 +6,12 @@ on:
   pull_request:
 
 jobs:
-  typecheck:
+  checks:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - uses: pnpm/action-setup@v4 # version comes from packageManager in package.json
+      - uses: pnpm/action-setup@v4
 
       - uses: actions/setup-node@v4
         with:
@@ -20,16 +20,25 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
+      - run: pnpm generate
+
+      - run: pnpm lint
+
       - run: pnpm typecheck
 
-      - run: pnpm build
-
   docker:
-    needs: typecheck
+    needs: checks
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
+    strategy:
+      matrix:
+        include:
+          - image: bot
+            dockerfile: apps/bot/Dockerfile
+          - image: web
+            dockerfile: apps/web/Dockerfile
     steps:
       - uses: actions/checkout@v4
 
@@ -47,7 +56,7 @@ jobs:
       - id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/${{ github.repository }}
+          images: ghcr.io/${{ github.repository }}/${{ matrix.image }}
           tags: |
             type=ref,event=branch
             type=ref,event=pr
@@ -57,10 +66,10 @@ jobs:
       - uses: docker/build-push-action@v6
         with:
           context: .
-          # amd64 + arm64 so the image runs on a Raspberry Pi
+          file: ${{ matrix.dockerfile }}
           platforms: linux/amd64,linux/arm64
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=${{ matrix.image }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.image }}

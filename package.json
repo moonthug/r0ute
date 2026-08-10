@@ -1,27 +1,19 @@
 {
   "name": "r0ute",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "private": true,
   "type": "module",
-  "scripts": {
-    "dev": "tsx src/index.ts",
-    "start": "node dist/index.js",
-    "build": "tsc -p tsconfig.build.json",
-    "typecheck": "tsc --noEmit"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
   "packageManager": "pnpm@10.33.0",
-  "dependencies": {
-    "@liamcottle/meshcore.js": "^1.14.0",
-    "@turf/turf": "^7.4.0",
-    "pino": "^10.3.1"
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "generate": "turbo generate",
+    "typecheck": "turbo typecheck",
+    "lint": "turbo lint",
+    "format": "biome format --write ."
   },
   "devDependencies": {
-    "@types/liamcottle__meshcore.js": "^1.10.0",
-    "tsx": "^4.23.11",
-    "typescript": "^7.0.2"
+    "@biomejs/biome": "^2.5.8",
+    "turbo": "^2.10.9"
   }
 }

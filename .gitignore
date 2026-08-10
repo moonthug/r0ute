@@ -133,3 +133,7 @@ dist
 # Project
 .idea/
 *.db
+
+# Prisma generated client
+packages/database/src/generated/
+.turbo/

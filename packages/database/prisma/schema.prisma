@@ -1,0 +1,20 @@
+generator client {
+  provider            = "prisma-client"
+  output              = "../src/generated"
+  importFileExtension = "ts"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model AdvertLocation {
+  publicKey       String   @id
+  name            String?
+  lat             Float
+  lon             Float
+  advertTimestamp DateTime
+  receivedAt      DateTime
+
+  @@index([name])
+}

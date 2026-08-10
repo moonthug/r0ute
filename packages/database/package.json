@@ -1,0 +1,32 @@
+{
+  "name": "@r0ute/database",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "lint": "biome check .",
+    "typecheck": "tsc --noEmit",
+    "generate": "prisma generate",
+    "migrate:dev": "prisma migrate dev",
+    "migrate:deploy": "prisma migrate deploy",
+    "import-sqlite": "tsx scripts/import-sqlite.mts"
+  },
+  "dependencies": {
+    "@prisma/adapter-pg": "^7.9.1",
+    "@prisma/client": "^7.9.1",
+    "prisma": "^7.9.1"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.5.8",
+    "@r0ute/biome-config": "workspace:*",
+    "@r0ute/tsconfig": "workspace:*",
+    "tsx": "^4.23.12",
+    "typescript": "^7.0.2"
+  }
+}

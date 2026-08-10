@@ -1,0 +1,7 @@
+{
+  "root": false,
+  "extends": ["@r0ute/biome-config/biome.json"],
+  "files": {
+    "includes": ["**", "!.next", "!next-env.d.ts"]
+  }
+}

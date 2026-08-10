@@ -1,17 +1,40 @@
 services:
   r0ute:
-    build: .
+    build:
+      # context stays at the repo root so the whole workspace is available
+      context: .
+      dockerfile: apps/bot/Dockerfile
     restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
     devices:
       - "/dev/ttyUSB0:/dev/ttyUSB0"
+    # lets the non-root `node` user open the serial device
     group_add:
       - dialout
     environment:
       DEVICE: /dev/ttyUSB0
-      DB_PATH: /data/r0ute.db
+      DATABASE_URL: postgresql://r0ute:r0ute@postgres:5432/r0ute
       LOG_LEVEL: info
+
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: r0ute
+      POSTGRES_PASSWORD: r0ute
+      POSTGRES_DB: r0ute
+    # exposed on localhost for `pnpm dev` / the prisma CLI (5433: host 5432 is taken)
+    ports:
+      - "5433:5432"
     volumes:
-      - r0ute-data:/data
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U r0ute -d r0ute"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
 
 volumes:
-  r0ute-data:
+  postgres-data:
