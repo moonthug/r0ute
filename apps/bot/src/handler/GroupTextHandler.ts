@@ -1,6 +1,6 @@
 import { createDecipheriv, createHmac } from "node:crypto";
 import type { Packet } from "@liamcottle/meshcore.js";
-import { PUSH_CHANNELS } from "@r0ute/database";
+import { PUSH_CHANNELS, push } from "@r0ute/database";
 
 import { type Channel, PacketType } from "../types.js";
 import type { Handler, HandlerContext } from "./Handler.js";
@@ -40,7 +40,7 @@ export class GroupTextHandler implements Handler {
   }
 
   public async onMessage(packet: Packet, context: HandlerContext) {
-    const { connection, channelMap, locationManager, logger, nodeName, push } = context;
+    const { connection, channelMap, locationManager, logger, nodeName } = context;
 
     const route = packet.getPathHashes().map((hash) => Buffer.from(hash).toString("hex"));
 
@@ -74,13 +74,18 @@ export class GroupTextHandler implements Handler {
 
     const position = await locationManager.latestPositionFor(user);
 
-    await push(PUSH_CHANNELS.groupMessages, {
-      channel: channel.name,
-      user,
-      route,
-      senderTimestamp: messageData.senderTimestamp,
-      receivedAt: new Date().toISOString(),
-    });
+    // a failed publish must never stop the responders from running
+    try {
+      await push(PUSH_CHANNELS.groupMessages, {
+        channel: channel.name,
+        user,
+        route,
+        senderTimestamp: messageData.senderTimestamp,
+        receivedAt: new Date().toISOString(),
+      });
+    } catch (error) {
+      logger.warn({ error }, "Failed to publish group-message push event");
+    }
 
     this.responders.forEach((responder) => {
       const keywordMatch = responder.keywords?.some((keyword) => message.includes(keyword));
@@ -99,8 +104,6 @@ export class GroupTextHandler implements Handler {
           },
         });
 
-        // responders run fire-and-forget, and sends can now time out — a
-        // rejection here must be logged, never left unhandled
         Promise.resolve(
           responder.onMessage(message, {
             connection,

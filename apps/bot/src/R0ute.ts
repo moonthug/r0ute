@@ -1,14 +1,13 @@
 import { createHash } from "node:crypto";
 import { Constants, NodeJSSerialConnection, Packet } from "@liamcottle/meshcore.js";
-import type { AdvertPush, GroupMessagePush } from "@r0ute/database";
 import { type Logger, pino } from "pino";
+
 import type { Handler } from "./handler/Handler.js";
 import { LocationManager } from "./LocationManager.js";
 import type { Channel, LogRxData } from "./types.js";
 
 type R0uteOptions = {
   device: string;
-  databaseUrl: string;
   handlers: Handler[];
 };
 
@@ -17,17 +16,17 @@ export class R0ute {
   private readonly device: string;
   private readonly handlers: Handler[];
   private readonly locationManager: LocationManager;
+  private readonly logger: Logger;
 
   private channelMap: Map<number, Channel>;
   private selfName: string | undefined;
-  private logger: Logger;
 
   constructor(options: R0uteOptions) {
     this.connection = new NodeJSSerialConnection(options.device);
     this.device = options.device;
     this.handlers = options.handlers;
 
-    this.locationManager = new LocationManager(options.databaseUrl);
+    this.locationManager = new LocationManager();
     this.channelMap = new Map<number, Channel>();
 
     this.logger = pino({
@@ -101,20 +100,11 @@ export class R0ute {
             locationManager: this.locationManager,
             logger: this.logger,
             nodeName: this.selfName,
-            push: this.push.bind(this),
           });
         }
       }
     } catch (e) {
       this.logger.warn({ error: e }, "Failed to decode packet");
-    }
-  }
-
-  private async push(channel: string, payload: AdvertPush | GroupMessagePush) {
-    try {
-      await this.locationManager.publish(channel, payload);
-    } catch (e) {
-      this.logger.warn({ channel, error: e }, "Failed to publish push event");
     }
   }
 }

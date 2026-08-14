@@ -1,6 +1,5 @@
-import type { Database } from "./index.ts";
+import { type Database, getDatabase } from "./client.ts";
 
-// lowercase: `LISTEN foo` folds to lowercase, the pg_notify() string argument does not
 export const PUSH_CHANNELS = {
   adverts: "push_adverts",
   groupMessages: "push_group_messages",
@@ -17,20 +16,25 @@ export type AdvertPush = {
   receivedAt: string; // ISO
 };
 
-// deliberately carries no message text — the consuming SSE endpoints are unauthenticated
 export type GroupMessagePush = {
   channel: string;
-  user: string; // sender display name (spoofable, display-only)
-  route: string[]; // hop prefixes, hex, uniform width 2|4|6 chars
-  senderTimestamp: number; // epoch seconds as decoded
-  receivedAt: string; // ISO, bot clock
+  user: string;
+  route: string[];
+  senderTimestamp: number;
+  receivedAt: string;
 };
 
-// pg_notify payloads are capped at 8000 bytes in the default postgres config
 export async function publishPush(
   db: Database,
   channel: string,
   payload: AdvertPush | GroupMessagePush,
 ): Promise<void> {
   await db.$executeRaw`SELECT pg_notify(${channel}::text, ${JSON.stringify(payload)}::text)`;
+}
+
+export async function push(
+  channel: PushChannel,
+  payload: AdvertPush | GroupMessagePush,
+): Promise<void> {
+  await publishPush(getDatabase(), channel, payload);
 }

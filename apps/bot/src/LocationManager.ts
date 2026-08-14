@@ -1,11 +1,4 @@
-import {
-  type AdvertPush,
-  createPrismaClient,
-  type Database,
-  type GroupMessagePush,
-  isValidCoordinate,
-  publishPush,
-} from "@r0ute/database";
+import { type AdvertPush, type Database, getDatabase, isValidCoordinate } from "@r0ute/database";
 import type { Coord } from "@turf/turf";
 
 import type { AdvertPayload } from "./types.js";
@@ -21,8 +14,8 @@ export type Position = {
 export class LocationManager {
   private readonly db: Database;
 
-  constructor(databaseUrl: string) {
-    this.db = createPrismaClient(databaseUrl);
+  constructor() {
+    this.db = getDatabase();
   }
 
   async recordAdvert(advert: AdvertPayload): Promise<AdvertPush | null> {
@@ -69,10 +62,6 @@ export class LocationManager {
       advertTimestamp: data.advertTimestamp.toISOString(),
       receivedAt: data.receivedAt.toISOString(),
     };
-  }
-
-  async publish(channel: string, payload: AdvertPush | GroupMessagePush): Promise<void> {
-    await publishPush(this.db, channel, payload);
   }
 
   async latestPositionFor(name: string): Promise<Position | undefined> {

@@ -13,7 +13,6 @@ if (!process.env.DATABASE_URL) {
 
 const r0ute = new R0ute({
   device: process.env.DEVICE,
-  databaseUrl: process.env.DATABASE_URL,
   handlers: [
     new AdvertHandler(),
     new GroupTextHandler({

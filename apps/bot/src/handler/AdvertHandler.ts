@@ -1,18 +1,16 @@
 import type { Packet } from "@liamcottle/meshcore.js";
-import { PUSH_CHANNELS } from "@r0ute/database";
+import { PUSH_CHANNELS, push } from "@r0ute/database";
 
 import { PacketType } from "../types.js";
 import type { Handler, HandlerContext } from "./Handler.js";
 
 export class AdvertHandler implements Handler {
   public packetType: PacketType = PacketType.Advert;
-  public async onMessage(packet: Packet, { locationManager, logger, push }: HandlerContext) {
+  public async onMessage(packet: Packet, { locationManager, logger }: HandlerContext) {
     const advert = packet.parsePayloadTypeAdvert();
     const recorded = await locationManager.recordAdvert(advert);
 
     if (recorded) {
-      await push(PUSH_CHANNELS.adverts, recorded);
-
       logger.debug({
         handler: "ADVERT",
         type: "LOCATION_UPDATE",
@@ -20,6 +18,13 @@ export class AdvertHandler implements Handler {
           name: advert.app_data.name ?? "unknown",
         },
       });
+
+      // a failed publish must never break packet handling
+      try {
+        await push(PUSH_CHANNELS.adverts, recorded);
+      } catch (error) {
+        logger.warn({ error }, "Failed to publish advert push event");
+      }
     }
   }
 }

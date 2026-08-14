@@ -1,5 +1,4 @@
 import type { NodeJSSerialConnection, Packet } from "@liamcottle/meshcore.js";
-import type { AdvertPush, GroupMessagePush } from "@r0ute/database";
 import type { Logger } from "pino";
 
 import type { LocationManager } from "../LocationManager.js";
@@ -11,7 +10,6 @@ export type HandlerContext = {
   logger: Logger;
   locationManager: LocationManager;
   nodeName: string | undefined;
-  push: (channel: string, payload: AdvertPush | GroupMessagePush) => Promise<void>;
 };
 
 export type Handler = {
