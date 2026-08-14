@@ -1,0 +1,12 @@
+- generic [active] [ref=f7e1]:
+  - main [ref=f7e2]:
+    - generic [ref=f7e3]:
+      - heading "r0ute" [level=1] [ref=f7e4]
+      - generic [ref=f7e5]: 134 nodes with a known location
+    - generic [ref=f7e7]:
+      - paragraph [ref=f7e9]: Loading map…
+      - complementary [ref=f7e10]:
+        - heading "Packets" [level=2] [ref=f7e11]
+        - paragraph [ref=f7e13]: Waiting for packets…
+  - button "Open Next.js Dev Tools" [ref=f7e19] [cursor=pointer]
+  - alert [ref=f7e23]

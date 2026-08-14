@@ -2,7 +2,7 @@
 
 import type { AdvertPush } from "@r0ute/database";
 import nextDynamic from "next/dynamic";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { type Anchor, type Candidate, type Hop, resolveRoute } from "../lib/resolve-route";
 import type { MapLocation, MapPath } from "./LeafletMap";
 import { PacketFeed, type PacketRow } from "./PacketFeed";
@@ -10,7 +10,7 @@ import { PacketFeed, type PacketRow } from "./PacketFeed";
 // leaflet touches `window` at import time, so the map must never render on the server
 const LeafletMap = nextDynamic(() => import("./LeafletMap"), {
   ssr: false,
-  loading: () => <p style={{ padding: "1rem" }}>Loading map…</p>,
+  loading: () => <p className="p-4 text-neutral-400">Loading map…</p>,
 });
 
 const PULSE_MS = 4_000; // covers the three CSS iterations, then the class is dropped
@@ -24,6 +24,11 @@ type GroupMessageEvent = {
   hops: Hop[];
   receivedAt: string;
 };
+
+/** the original event a feed row was built from, kept for replay-on-click */
+type PacketPayload =
+  | { kind: "advert"; advert: AdvertPush }
+  | { kind: "group-message"; message: GroupMessageEvent };
 
 function frameData(event: Event): string | null {
   // EventSource's typed map only covers open/message/error, so named frames
@@ -121,7 +126,6 @@ export function LocationMap({ locations }: { locations: MapLocation[] }) {
   const [pulses, setPulses] = useState<Record<string, number>>({});
   const [paths, setPaths] = useState<MapPath[]>([]);
   const [packets, setPackets] = useState<PacketRow[]>([]);
-  const nextPacketId = useRef(0);
 
   // the group-message handler needs the current markers to find the sender, but
   // must not tear down the EventSources every time an advert lands
@@ -131,74 +135,44 @@ export function LocationMap({ locations }: { locations: MapLocation[] }) {
   }, [markers]);
 
   const nextPathId = useRef(0);
+  const nextPacketId = useRef(0);
   // pulse counters live in a ref as well as state, so an expiry timer can tell
   // whether it is retiring its own pulse or a fresher one
   const pulseSeq = useRef(new Map<string, number>());
+  // original events per feed row, for replay-on-click
+  const packetPayloads = useRef(new Map<number, PacketPayload>());
+  const timers = useRef(new Set<ReturnType<typeof setTimeout>>());
 
-  useEffect(() => {
-    const adverts = new EventSource("/api/push/adverts");
-    const groupMessages = new EventSource("/api/push/group-messages");
-    const timers = new Set<ReturnType<typeof setTimeout>>();
+  const schedule = useCallback((run: () => void, delayMs: number): void => {
+    const timer = setTimeout(() => {
+      timers.current.delete(timer);
+      run();
+    }, delayMs);
+    timers.current.add(timer);
+  }, []);
 
-    const schedule = (run: () => void, delayMs: number): void => {
-      const timer = setTimeout(() => {
-        timers.delete(timer);
-        run();
-      }, delayMs);
-      timers.add(timer);
-    };
+  const applyPulse = useCallback(
+    (publicKey: string): void => {
+      const seq = (pulseSeq.current.get(publicKey) ?? 0) + 1;
+      pulseSeq.current.set(publicKey, seq);
 
-    const addPacket = (packet: Omit<PacketRow, "id">): void => {
-      nextPacketId.current += 1;
-      const row = { ...packet, id: nextPacketId.current };
-      setPackets((current) => [row, ...current].slice(0, MAX_PACKETS));
-    };
-
-    const onAdvert = (event: Event): void => {
-      const advert = parseAdvert(event);
-      if (!advert) return;
-
-      addPacket({
-        kind: "advert",
-        receivedAt: advert.receivedAt,
-        title: advert.name ?? `${advert.publicKey.slice(0, 12)}…`,
-        detail: `${advert.lat.toFixed(5)}, ${advert.lon.toFixed(5)}`,
-      });
-
-      const seq = (pulseSeq.current.get(advert.publicKey) ?? 0) + 1;
-      pulseSeq.current.set(advert.publicKey, seq);
-
-      setMarkers((current) => upsertMarker(current, advert));
-      setPulses((current) => ({ ...current, [advert.publicKey]: seq }));
+      setPulses((current) => ({ ...current, [publicKey]: seq }));
       // dropping the entry remounts the marker without the animated class, so a
       // later advert for the same node pulses again — but only this pulse's own
       // timer may retire it
       schedule(() => {
-        if (pulseSeq.current.get(advert.publicKey) !== seq) return;
-        pulseSeq.current.delete(advert.publicKey);
+        if (pulseSeq.current.get(publicKey) !== seq) return;
+        pulseSeq.current.delete(publicKey);
         setPulses((current) =>
-          Object.fromEntries(Object.entries(current).filter(([key]) => key !== advert.publicKey)),
+          Object.fromEntries(Object.entries(current).filter(([key]) => key !== publicKey)),
         );
       }, PULSE_MS);
-    };
+    },
+    [schedule],
+  );
 
-    const onGroupMessage = (event: Event): void => {
-      const message = parseGroupMessage(event);
-      if (!message) return;
-
-      // record the packet even when there is nothing drawable about it
-      const unknown = message.hops.filter((hop) => hop.candidates.length === 0).length;
-      const hopCount = message.hops.length;
-      addPacket({
-        kind: "group-message",
-        receivedAt: message.receivedAt,
-        title: message.user,
-        detail:
-          `${message.channel} · ` +
-          (hopCount === 0 ? "direct" : `${hopCount} hop${hopCount === 1 ? "" : "s"}`) +
-          (unknown > 0 ? ` (${unknown} unknown)` : ""),
-      });
-
+  const applyPath = useCallback(
+    (message: GroupMessageEvent): void => {
       const resolved = resolveRoute(message.hops, findAnchor(markersRef.current, message.user));
       if (resolved.segments.length === 0) return;
 
@@ -217,6 +191,86 @@ export function LocationMap({ locations }: { locations: MapLocation[] }) {
       schedule(() => {
         setPaths((current) => current.filter((entry) => entry.id !== id));
       }, PATH_TTL_MS);
+    },
+    [schedule],
+  );
+
+  const addPacket = useCallback((row: Omit<PacketRow, "id">, payload: PacketPayload): void => {
+    nextPacketId.current += 1;
+    const packet = { ...row, id: nextPacketId.current };
+    packetPayloads.current.set(packet.id, payload);
+    setPackets((current) => {
+      const next = [packet, ...current].slice(0, MAX_PACKETS);
+      // retire payloads for rows that fell off the end of the feed
+      for (const dropped of current.slice(MAX_PACKETS - 1)) {
+        packetPayloads.current.delete(dropped.id);
+      }
+      return next;
+    });
+  }, []);
+
+  // replay a packet as if it had just arrived, on an otherwise-clean map
+  const replayPacket = useCallback(
+    (id: number): void => {
+      const payload = packetPayloads.current.get(id);
+      if (!payload) return;
+
+      pulseSeq.current.clear();
+      setPulses({});
+      setPaths([]);
+
+      if (payload.kind === "advert") {
+        applyPulse(payload.advert.publicKey);
+      } else {
+        applyPath(payload.message);
+      }
+    },
+    [applyPulse, applyPath],
+  );
+
+  useEffect(() => {
+    const adverts = new EventSource("/api/push/adverts");
+    const groupMessages = new EventSource("/api/push/group-messages");
+
+    const onAdvert = (event: Event): void => {
+      const advert = parseAdvert(event);
+      if (!advert) return;
+
+      addPacket(
+        {
+          kind: "advert",
+          receivedAt: advert.receivedAt,
+          title: advert.name ?? `${advert.publicKey.slice(0, 12)}…`,
+          detail: `${advert.lat.toFixed(5)}, ${advert.lon.toFixed(5)}`,
+        },
+        { kind: "advert", advert },
+      );
+
+      setMarkers((current) => upsertMarker(current, advert));
+      applyPulse(advert.publicKey);
+    };
+
+    const onGroupMessage = (event: Event): void => {
+      const message = parseGroupMessage(event);
+      if (!message) return;
+
+      // record the packet even when there is nothing drawable about it
+      const unknown = message.hops.filter((hop) => hop.candidates.length === 0).length;
+      const hopCount = message.hops.length;
+      addPacket(
+        {
+          kind: "group-message",
+          receivedAt: message.receivedAt,
+          title: message.user,
+          detail:
+            `${message.channel} · ` +
+            (hopCount === 0 ? "direct" : `${hopCount} hop${hopCount === 1 ? "" : "s"}`) +
+            (unknown > 0 ? ` (${unknown} unknown)` : ""),
+        },
+        { kind: "group-message", message },
+      );
+
+      applyPath(message);
     };
 
     adverts.addEventListener("advert", onAdvert);
@@ -225,16 +279,17 @@ export function LocationMap({ locations }: { locations: MapLocation[] }) {
     return () => {
       adverts.close();
       groupMessages.close();
-      for (const timer of timers) clearTimeout(timer);
+      for (const timer of timers.current) clearTimeout(timer);
+      timers.current.clear();
     };
-  }, []);
+  }, [addPacket, applyPulse, applyPath]);
 
   return (
-    <div style={{ display: "flex", height: "100%", minHeight: 0 }}>
-      <div style={{ flex: 1, minWidth: 0 }}>
+    <div className="flex h-full min-h-0">
+      <div className="min-w-0 flex-1">
         <LeafletMap locations={markers} pulses={pulses} paths={paths} />
       </div>
-      <PacketFeed rows={packets} />
+      <PacketFeed rows={packets} onSelect={replayPacket} />
     </div>
   );
 }

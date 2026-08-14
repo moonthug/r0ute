@@ -19,6 +19,7 @@ import {
   describeHop,
   type ResolvedHop,
   type RouteSegment,
+  segmentArrows,
 } from "../lib/resolve-route";
 
 export type MapLocation = {
@@ -73,25 +74,30 @@ function DevMapHandle() {
 }
 
 const FALLBACK_CENTER: [number, number] = [53.1442947, -1.5428249]; // Matlock
-const PATH_COLOR = "#f97316"; // distinct from the indigo marker fill
-const ARROW_PX = 16;
+const PATH_COLOR = "#f97316"; // distinct from the cyan marker fill
+const ARROW_PX = { main: 16, alt: 12 } as const;
 
-// an icon only ever depends on its angle, so whole-degree buckets let every
-// arrow reuse one instance and leaflet skip rebuilding the element each render
-const arrowIcons = new Map<number, DivIcon>();
+type ArrowVariant = keyof typeof ARROW_PX;
 
-function arrowIcon(angleDeg: number): DivIcon {
+// an icon only depends on its angle and variant, so whole-degree buckets let
+// every arrow reuse one instance and leaflet skip rebuilding elements
+const arrowIcons = new Map<string, DivIcon>();
+
+function arrowIcon(angleDeg: number, variant: ArrowVariant): DivIcon {
   const degrees = Math.round(angleDeg) % 360;
-  const cached = arrowIcons.get(degrees);
+  const key = `${variant}:${degrees}`;
+  const cached = arrowIcons.get(key);
   if (cached) return cached;
 
+  const size = ARROW_PX[variant];
   const icon = divIcon({
-    className: "route-arrow", // replaces leaflet's boxed div-icon default
+    // route-arrow replaces leaflet's boxed div-icon default
+    className: variant === "alt" ? "route-arrow route-arrow-alt" : "route-arrow",
     html: `<svg viewBox="0 0 16 16" style="transform: rotate(${degrees}deg)"><path d="M8 1.5 14 14 8 10.6 2 14Z"/></svg>`,
-    iconSize: [ARROW_PX, ARROW_PX],
-    iconAnchor: [ARROW_PX / 2, ARROW_PX / 2],
+    iconSize: [size, size],
+    iconAnchor: [size / 2, size / 2],
   });
-  arrowIcons.set(degrees, icon);
+  arrowIcons.set(key, icon);
   return icon;
 }
 
@@ -112,9 +118,10 @@ export default function LeafletMap({
     <MapContainer center={FALLBACK_CENTER} zoom={10} style={{ height: "100%", width: "100%" }}>
       <FitToMarkers locations={locations} />
       <DevMapHandle />
+      {/* dark, label-light basemap: the mesh is the subject, not the roads */}
       <TileLayer
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-        url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
+        url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
       />
       {locations.map((location) => {
         // a remount would tear down an open popup, so a marker being read holds
@@ -140,10 +147,10 @@ export default function LeafletMap({
                 ),
             }}
             pathOptions={{
-              color: "#ffffff", // ring so overlapping markers stay separable
+              color: "#0a0a0a", // dark ring so overlapping markers stay separable
               weight: 2,
-              fillColor: "#4338ca",
-              fillOpacity: 0.85,
+              fillColor: "#22d3ee",
+              fillOpacity: 0.9,
               className: pulse ? "node-marker pulse" : "node-marker",
             }}
           >
@@ -164,7 +171,13 @@ export default function LeafletMap({
             key={`${path.id}:${edge.id}`}
             positions={edge.positions}
             interactive={false}
-            pathOptions={{ color: PATH_COLOR, weight: 2, opacity: 0.7, dashArray: "4 6" }}
+            pathOptions={{
+              color: PATH_COLOR,
+              weight: 2,
+              opacity: 0.6,
+              dashArray: "4 6",
+              className: "route-alt",
+            }}
           />
         )),
       )}
@@ -176,7 +189,8 @@ export default function LeafletMap({
             pathOptions={{
               color: PATH_COLOR,
               weight: 3,
-              opacity: 0.9,
+              opacity: 0.95,
+              className: "route-line",
               // only the name-guessed sender leg is dashed; hop ambiguity is
               // shown by the alternative-edge fan instead
               ...(segment.ambiguous ? { dashArray: "6 8" } : {}),
@@ -195,12 +209,26 @@ export default function LeafletMap({
         )),
       )}
       {paths.map((path) =>
+        path.alternatives.flatMap((edge) =>
+          segmentArrows(edge.positions).map((arrow) => (
+            <Marker
+              key={`${path.id}:${edge.id}:${arrow.id}`}
+              position={arrow.position}
+              icon={arrowIcon(arrow.angleDeg, "alt")}
+              // purely decorative: never steal a click from the node underneath
+              interactive={false}
+              keyboard={false}
+            />
+          )),
+        ),
+      )}
+      {paths.map((path) =>
         path.segments.flatMap((segment) =>
           segment.arrows.map((arrow) => (
             <Marker
               key={`${path.id}:${segment.id}:${arrow.id}`}
               position={arrow.position}
-              icon={arrowIcon(arrow.angleDeg)}
+              icon={arrowIcon(arrow.angleDeg, "main")}
               // purely decorative: never steal a click from the node underneath
               interactive={false}
               keyboard={false}

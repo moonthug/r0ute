@@ -10,9 +10,9 @@ export type PacketRow = {
   detail: string;
 };
 
-const KIND_LABEL: Record<PacketRow["kind"], { text: string; color: string }> = {
-  advert: { text: "ADVERT", color: "#4338ca" }, // matches the node markers
-  "group-message": { text: "MESSAGE", color: "#f97316" }, // matches the route lines
+const KIND_BADGE: Record<PacketRow["kind"], { text: string; className: string }> = {
+  advert: { text: "ADVERT", className: "bg-cyan-400 text-neutral-950" }, // matches the node markers
+  "group-message": { text: "MESSAGE", className: "bg-orange-500 text-neutral-950" }, // matches the routes
 };
 
 function timeOf(iso: string): string {
@@ -20,79 +20,56 @@ function timeOf(iso: string): string {
   return Number.isNaN(date.getTime()) ? "—" : date.toLocaleTimeString();
 }
 
-/** Live feed of received packets, newest first. Purely presentational. */
-export function PacketFeed({ rows }: { rows: PacketRow[] }) {
+/**
+ * Live feed of received packets, newest first. Clicking (or Enter/Space on) a
+ * row replays that packet on the map.
+ */
+export function PacketFeed({
+  rows,
+  onSelect,
+}: {
+  rows: PacketRow[];
+  onSelect: (id: number) => void;
+}) {
   return (
-    <aside
-      style={{
-        width: "20rem",
-        borderLeft: "1px solid #e5e7eb",
-        display: "flex",
-        flexDirection: "column",
-        minHeight: 0,
-        background: "#ffffff",
-      }}
-    >
-      <h2
-        style={{
-          margin: 0,
-          padding: "0.5rem 0.75rem",
-          fontSize: "0.8rem",
-          textTransform: "uppercase",
-          letterSpacing: "0.05em",
-          color: "#6b7280",
-          borderBottom: "1px solid #e5e7eb",
-        }}
-      >
+    <aside className="flex w-80 min-h-0 flex-col border-l border-neutral-800 bg-neutral-950">
+      <h2 className="m-0 border-b border-neutral-800 px-3 py-2 text-xs font-semibold uppercase tracking-widest text-neutral-500">
         Packets
       </h2>
-      <div style={{ overflowY: "auto", flex: 1 }}>
+      <div className="min-h-0 flex-1 overflow-y-auto">
         {rows.length === 0 ? (
-          <p style={{ padding: "0.75rem", color: "#9ca3af", fontSize: "0.85rem" }}>
-            Waiting for packets…
-          </p>
+          <p className="p-3 text-sm text-neutral-600">Waiting for packets…</p>
         ) : (
-          <table
-            style={{
-              width: "100%",
-              borderCollapse: "collapse",
-              fontSize: "0.8rem",
-            }}
-          >
+          <table className="w-full border-collapse text-xs">
             <tbody>
               {rows.map((row) => {
-                const kind = KIND_LABEL[row.kind];
+                const badge = KIND_BADGE[row.kind];
+                const replay = () => onSelect(row.id);
                 return (
-                  <tr key={row.id} style={{ borderBottom: "1px solid #f3f4f6" }}>
-                    <td
-                      style={{
-                        padding: "0.4rem 0.5rem 0.4rem 0.75rem",
-                        whiteSpace: "nowrap",
-                        verticalAlign: "top",
-                        color: "#6b7280",
-                        fontVariantNumeric: "tabular-nums",
-                      }}
-                    >
+                  <tr
+                    key={row.id}
+                    tabIndex={0}
+                    onClick={replay}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        replay();
+                      }
+                    }}
+                    className="cursor-pointer border-b border-neutral-800/60 outline-none transition-colors hover:bg-neutral-900 focus-visible:bg-neutral-900"
+                    title="Replay this packet on the map"
+                  >
+                    <td className="whitespace-nowrap py-1.5 pr-2 pl-3 align-top tabular-nums text-neutral-500">
                       {timeOf(row.receivedAt)}
                     </td>
-                    <td style={{ padding: "0.4rem 0.5rem", verticalAlign: "top" }}>
+                    <td className="px-2 py-1.5 align-top">
                       <span
-                        style={{
-                          display: "inline-block",
-                          fontSize: "0.65rem",
-                          fontWeight: 600,
-                          color: "#ffffff",
-                          background: kind.color,
-                          borderRadius: "3px",
-                          padding: "0.05rem 0.3rem",
-                          marginRight: "0.4rem",
-                          verticalAlign: "text-bottom",
-                        }}
+                        className={`mr-1.5 inline-block rounded-sm px-1 py-px align-text-bottom text-[0.65rem] font-bold ${badge.className}`}
                       >
-                        {kind.text}
+                        {badge.text}
                       </span>
-                      <strong>{row.title}</strong>
-                      <div style={{ color: "#6b7280", marginTop: "0.1rem" }}>{row.detail}</div>
+                      <strong className="text-neutral-100">{row.title}</strong>
+                      <div className="mt-0.5 text-neutral-400">{row.detail}</div>
                     </td>
                   </tr>
                 );

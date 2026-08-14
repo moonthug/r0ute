@@ -1,11 +1,47 @@
-/* Leaflet renders markers as SVG paths outside any React-scoped stylesheet, and
-   a CircleMarker's className is only applied at mount (leaflet#2662) — the map
-   remounts a marker with `pulse` to replay this animation. */
+/* Leaflet renders markers as SVG paths outside any React-scoped stylesheet, so
+   the data layer's look lives here rather than in Tailwind classes. */
 
+.leaflet-container {
+  background: #0a0a0a; /* matches the dark tiles while they load */
+}
+
+/* nodes read as radar blips: cyan core with a soft glow */
+.node-marker {
+  filter: drop-shadow(0 0 4px rgba(34, 211, 238, 0.7));
+}
+
+/* a CircleMarker's className is only applied at mount (leaflet#2662) — the map
+   remounts a marker with `pulse` to replay this animation */
 .node-marker.pulse {
   transform-box: fill-box;
   transform-origin: center;
   animation: node-pulse 1.2s ease-out 3;
+}
+
+@keyframes node-pulse {
+  0% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 4px rgba(34, 211, 238, 0.7));
+  }
+
+  50% {
+    transform: scale(1.8);
+    filter: drop-shadow(0 0 14px rgba(34, 211, 238, 1));
+  }
+
+  100% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 4px rgba(34, 211, 238, 0.7));
+  }
+}
+
+/* message routes glow; the chosen chain stronger than the alternatives */
+.route-line {
+  filter: drop-shadow(0 0 6px rgba(249, 115, 22, 0.8));
+}
+
+.route-alt {
+  filter: drop-shadow(0 0 3px rgba(249, 115, 22, 0.4));
 }
 
 /* Direction arrows on message routes. The double class beats leaflet's own
@@ -27,25 +63,59 @@
 
 .route-arrow path {
   fill: #f97316;
-  stroke: #ffffff;
+  stroke: #0a0a0a;
   stroke-width: 2.5;
   stroke-linejoin: round;
   /* stroke first so it reads as a halo behind the arrow, not a thick outline */
   paint-order: stroke;
+  filter: drop-shadow(0 0 3px rgba(249, 115, 22, 0.6));
 }
 
-@keyframes node-pulse {
-  0% {
-    transform: scale(1);
-    stroke-opacity: 1;
-  }
+/* arrows on alternative branches: present but clearly subordinate */
+.route-arrow.route-arrow-alt {
+  opacity: 0.55;
+}
 
-  50% {
-    transform: scale(1.8);
-  }
+.route-arrow.route-arrow-alt path {
+  filter: none;
+}
 
-  100% {
-    transform: scale(1);
-    stroke-opacity: 0.3;
-  }
+/* dark chrome for leaflet's popups, tooltips and attribution */
+.leaflet-popup-content-wrapper,
+.leaflet-tooltip {
+  background: #171717;
+  color: #e5e5e5;
+  border: 1px solid #262626;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+}
+
+.leaflet-popup-tip {
+  background: #171717;
+}
+
+.leaflet-tooltip-top::before {
+  border-top-color: #262626;
+}
+
+.leaflet-tooltip-bottom::before {
+  border-bottom-color: #262626;
+}
+
+.leaflet-bar a {
+  background: #171717;
+  color: #e5e5e5;
+  border-color: #262626;
+}
+
+.leaflet-bar a:hover {
+  background: #262626;
+}
+
+.leaflet-container .leaflet-control-attribution {
+  background: rgba(10, 10, 10, 0.7);
+  color: #737373;
+}
+
+.leaflet-container .leaflet-control-attribution a {
+  color: #a3a3a3;
 }
