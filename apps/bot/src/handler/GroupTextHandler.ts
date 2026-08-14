@@ -74,7 +74,6 @@ export class GroupTextHandler implements Handler {
 
     const position = await locationManager.latestPositionFor(user);
 
-    // a failed publish must never stop the responders from running
     try {
       await push(PUSH_CHANNELS.groupMessages, {
         channel: channel.name,

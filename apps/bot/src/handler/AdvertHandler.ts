@@ -19,7 +19,6 @@ export class AdvertHandler implements Handler {
         },
       });
 
-      // a failed publish must never break packet handling
       try {
         await push(PUSH_CHANNELS.adverts, recorded);
       } catch (error) {
