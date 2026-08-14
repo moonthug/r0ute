@@ -4,7 +4,7 @@ import { type Logger, pino } from "pino";
 import { Heartbeat } from "./Heartbeat.js";
 import type { Handler } from "./handler/Handler.js";
 import { LocationManager } from "./LocationManager.js";
-import type { Channel, LogRxData } from "./types.js";
+import type { Channel, LogRxData, PacketType } from "./types.js";
 
 type R0uteOptions = {
   device: string;
@@ -103,14 +103,18 @@ export class R0ute {
     try {
       const packet = Packet.fromBytes(data.raw);
 
+      const packetType = packet.payload_type_string;
+      if (packetType === null) return;
+
       for (const handler of this.handlers) {
-        if (packet.payload_type_string === handler.packetType) {
+        if (handler.packetTypes.includes(packetType as PacketType)) {
           await handler.onMessage(packet, {
             connection: this.connection,
             channelMap: this.channelMap,
             locationManager: this.locationManager,
             logger: this.logger,
             nodeName: this.selfName,
+            rx: { snr: data.lastSnr, rssi: data.lastRssi },
           });
         }
       }

@@ -55,6 +55,7 @@ export class LocationManager {
     });
 
     return {
+      type: "advert",
       publicKey,
       name: data.name,
       lat: data.lat,

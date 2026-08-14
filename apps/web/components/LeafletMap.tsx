@@ -31,10 +31,12 @@ export type MapLocation = {
   receivedAt: string;
 };
 
+export type PathVariant = "message" | "packet";
+
 export type MapPath = {
   id: string;
-  user: string;
-  channel: string;
+  label: string;
+  variant: PathVariant;
   hops: ResolvedHop[];
   segments: RouteSegment[];
   alternatives: AlternativeEdge[];
@@ -74,25 +76,34 @@ function DevMapHandle() {
 }
 
 const FALLBACK_CENTER: [number, number] = [53.1442947, -1.5428249]; // Matlock
-const PATH_COLOR = "#f97316"; // distinct from the cyan marker fill
+// both distinct from the cyan marker fill: orange = decoded messages,
+// violet = opaque routed packets
+const PATH_COLORS: Record<PathVariant, string> = {
+  message: "#f97316",
+  packet: "#a78bfa",
+};
 const ARROW_PX = { main: 16, alt: 12 } as const;
 
-type ArrowVariant = keyof typeof ARROW_PX;
+type ArrowWeight = keyof typeof ARROW_PX;
 
-// an icon only depends on its angle and variant, so whole-degree buckets let
-// every arrow reuse one instance and leaflet skip rebuilding elements
+// an icon only depends on its angle, weight and palette, so whole-degree
+// buckets let every arrow reuse one instance and leaflet skip rebuilding
 const arrowIcons = new Map<string, DivIcon>();
 
-function arrowIcon(angleDeg: number, variant: ArrowVariant): DivIcon {
+function arrowIcon(angleDeg: number, weight: ArrowWeight, variant: PathVariant): DivIcon {
   const degrees = Math.round(angleDeg) % 360;
-  const key = `${variant}:${degrees}`;
+  const key = `${variant}:${weight}:${degrees}`;
   const cached = arrowIcons.get(key);
   if (cached) return cached;
 
-  const size = ARROW_PX[variant];
+  const size = ARROW_PX[weight];
+  const classNames = [
+    "route-arrow", // replaces leaflet's boxed div-icon default
+    ...(weight === "alt" ? ["route-arrow-alt"] : []),
+    ...(variant === "packet" ? ["route-arrow-packet"] : []),
+  ];
   const icon = divIcon({
-    // route-arrow replaces leaflet's boxed div-icon default
-    className: variant === "alt" ? "route-arrow route-arrow-alt" : "route-arrow",
+    className: classNames.join(" "),
     html: `<svg viewBox="0 0 16 16" style="transform: rotate(${degrees}deg)"><path d="M8 1.5 14 14 8 10.6 2 14Z"/></svg>`,
     iconSize: [size, size],
     iconAnchor: [size / 2, size / 2],
@@ -172,11 +183,11 @@ export default function LeafletMap({
             positions={edge.positions}
             interactive={false}
             pathOptions={{
-              color: PATH_COLOR,
+              color: PATH_COLORS[path.variant],
               weight: 2,
               opacity: 0.6,
               dashArray: "4 6",
-              className: "route-alt",
+              className: path.variant === "packet" ? "route-alt route-alt-packet" : "route-alt",
             }}
           />
         )),
@@ -187,19 +198,17 @@ export default function LeafletMap({
             key={`${path.id}:${segment.id}`}
             positions={segment.positions}
             pathOptions={{
-              color: PATH_COLOR,
+              color: PATH_COLORS[path.variant],
               weight: 3,
               opacity: 0.95,
-              className: "route-line",
+              className: path.variant === "packet" ? "route-line route-line-packet" : "route-line",
               // only the name-guessed sender leg is dashed; hop ambiguity is
               // shown by the alternative-edge fan instead
               ...(segment.ambiguous ? { dashArray: "6 8" } : {}),
             }}
           >
             <Tooltip sticky>
-              <strong>
-                {path.user} → {path.channel}
-              </strong>
+              <strong>{path.label}</strong>
               <br />
               {path.hops.length} hop{path.hops.length === 1 ? "" : "s"}
               <br />
@@ -214,7 +223,7 @@ export default function LeafletMap({
             <Marker
               key={`${path.id}:${edge.id}:${arrow.id}`}
               position={arrow.position}
-              icon={arrowIcon(arrow.angleDeg, "alt")}
+              icon={arrowIcon(arrow.angleDeg, "alt", path.variant)}
               // purely decorative: never steal a click from the node underneath
               interactive={false}
               keyboard={false}
@@ -228,7 +237,7 @@ export default function LeafletMap({
             <Marker
               key={`${path.id}:${segment.id}:${arrow.id}`}
               position={arrow.position}
-              icon={arrowIcon(arrow.angleDeg, "main")}
+              icon={arrowIcon(arrow.angleDeg, "main", path.variant)}
               // purely decorative: never steal a click from the node underneath
               interactive={false}
               keyboard={false}

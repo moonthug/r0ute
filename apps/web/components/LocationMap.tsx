@@ -4,7 +4,7 @@ import type { AdvertPush } from "@r0ute/database";
 import nextDynamic from "next/dynamic";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { type Anchor, type Candidate, type Hop, resolveRoute } from "../lib/resolve-route";
-import type { MapLocation, MapPath } from "./LeafletMap";
+import type { MapLocation, MapPath, PathVariant } from "./LeafletMap";
 import { PacketFeed, type PacketRow } from "./PacketFeed";
 
 // leaflet touches `window` at import time, so the map must never render on the server
@@ -25,35 +25,50 @@ type GroupMessageEvent = {
   receivedAt: string;
 };
 
+type RoutePacketEvent = {
+  packetType: string;
+  hops: Hop[];
+  snr: number | null;
+  rssi: number | null;
+  receivedAt: string;
+};
+
+/** what applyPath needs to draw any routed event */
+type PathInput = {
+  label: string;
+  hops: Hop[];
+  variant: PathVariant;
+  /** display name to anchor the chain from, when one is known */
+  anchorUser?: string;
+};
+
 /** the original event a feed row was built from, kept for replay-on-click */
-type PacketPayload =
-  | { kind: "advert"; advert: AdvertPush }
-  | { kind: "group-message"; message: GroupMessageEvent };
+type PacketPayload = { kind: "advert"; advert: AdvertPush } | { kind: "path"; path: PathInput };
 
-function frameData(event: Event): string | null {
-  // EventSource's typed map only covers open/message/error, so named frames
-  // arrive as a bare Event
-  const data: unknown = (event as MessageEvent<unknown>).data;
-  return typeof data === "string" ? data : null;
-}
+function parseHops(value: unknown): Hop[] | null {
+  if (!Array.isArray(value)) return null;
 
-function parseJson(event: Event): Record<string, unknown> | null {
-  const data = frameData(event);
-  if (data === null) return null;
-
-  let value: unknown;
-  try {
-    value = JSON.parse(data);
-  } catch {
-    return null;
+  const hops: Hop[] = [];
+  for (const hop of value) {
+    if (typeof hop !== "object" || hop === null) return null;
+    const { prefix, candidates } = hop as Record<string, unknown>;
+    if (typeof prefix !== "string") return null;
+    const parsedCandidates = (Array.isArray(candidates) ? candidates : [])
+      .map((candidate): Candidate | null => {
+        if (typeof candidate !== "object" || candidate === null) return null;
+        const { publicKey, name, lat, lon } = candidate as Record<string, unknown>;
+        if (typeof publicKey !== "string" || typeof lat !== "number" || typeof lon !== "number") {
+          return null;
+        }
+        return { publicKey, name: typeof name === "string" ? name : null, lat, lon };
+      })
+      .filter((candidate): candidate is Candidate => candidate !== null);
+    hops.push({ prefix, candidates: parsedCandidates });
   }
-  return typeof value === "object" && value !== null ? (value as Record<string, unknown>) : null;
+  return hops;
 }
 
-function parseAdvert(event: Event): AdvertPush | null {
-  const value = parseJson(event);
-  if (!value) return null;
-
+function parseAdvert(value: Record<string, unknown>): AdvertPush | null {
   const { publicKey, name, lat, lon, advertTimestamp, receivedAt } = value;
   if (typeof publicKey !== "string" || typeof lat !== "number" || typeof lon !== "number") {
     return null;
@@ -61,6 +76,7 @@ function parseAdvert(event: Event): AdvertPush | null {
 
   const now = new Date().toISOString();
   return {
+    type: "advert",
     publicKey,
     name: typeof name === "string" ? name : null,
     lat,
@@ -70,37 +86,33 @@ function parseAdvert(event: Event): AdvertPush | null {
   };
 }
 
-function parseCandidate(value: unknown): Candidate | null {
-  if (typeof value !== "object" || value === null) return null;
-  const { publicKey, name, lat, lon } = value as Record<string, unknown>;
-  if (typeof publicKey !== "string" || typeof lat !== "number" || typeof lon !== "number") {
-    return null;
-  }
-  return { publicKey, name: typeof name === "string" ? name : null, lat, lon };
-}
-
-function parseGroupMessage(event: Event): GroupMessageEvent | null {
-  const value = parseJson(event);
-  if (!value) return null;
-
+function parseGroupMessage(value: Record<string, unknown>): GroupMessageEvent | null {
   const { channel, user, hops, receivedAt } = value;
-  if (typeof channel !== "string" || typeof user !== "string" || !Array.isArray(hops)) return null;
+  if (typeof channel !== "string" || typeof user !== "string") return null;
 
-  const parsedHops: Hop[] = [];
-  for (const hop of hops) {
-    if (typeof hop !== "object" || hop === null) return null;
-    const { prefix, candidates } = hop as Record<string, unknown>;
-    if (typeof prefix !== "string") return null;
-    const parsedCandidates = (Array.isArray(candidates) ? candidates : [])
-      .map(parseCandidate)
-      .filter((candidate): candidate is Candidate => candidate !== null);
-    parsedHops.push({ prefix, candidates: parsedCandidates });
-  }
+  const parsedHops = parseHops(hops);
+  if (!parsedHops) return null;
 
   return {
     channel,
     user,
     hops: parsedHops,
+    receivedAt: typeof receivedAt === "string" ? receivedAt : new Date().toISOString(),
+  };
+}
+
+function parseRoutePacket(value: Record<string, unknown>): RoutePacketEvent | null {
+  const { packetType, hops, snr, rssi, receivedAt } = value;
+  if (typeof packetType !== "string") return null;
+
+  const parsedHops = parseHops(hops);
+  if (!parsedHops) return null;
+
+  return {
+    packetType,
+    hops: parsedHops,
+    snr: typeof snr === "number" ? snr : null,
+    rssi: typeof rssi === "number" ? rssi : null,
     receivedAt: typeof receivedAt === "string" ? receivedAt : new Date().toISOString(),
   };
 }
@@ -115,10 +127,17 @@ function upsertMarker(markers: MapLocation[], advert: AdvertPush): MapLocation[]
  * Display names are neither unique nor verified, so only an unambiguous match
  * is trusted enough to anchor the chain — everything else draws hops only.
  */
-function findAnchor(markers: MapLocation[], user: string): Anchor | null {
+function findAnchor(markers: MapLocation[], user: string | undefined): Anchor | null {
+  if (!user) return null;
   const matches = markers.filter((marker) => marker.name === user);
   const only = matches.length === 1 ? matches[0] : undefined;
   return only ? { lat: only.lat, lon: only.lon } : null;
+}
+
+function hopSummary(hops: Hop[]): string {
+  const unknown = hops.filter((hop) => hop.candidates.length === 0).length;
+  const base = hops.length === 0 ? "direct" : `${hops.length} hop${hops.length === 1 ? "" : "s"}`;
+  return unknown > 0 ? `${base} (${unknown} unknown)` : base;
 }
 
 export function LocationMap({ locations }: { locations: MapLocation[] }) {
@@ -127,8 +146,8 @@ export function LocationMap({ locations }: { locations: MapLocation[] }) {
   const [paths, setPaths] = useState<MapPath[]>([]);
   const [packets, setPackets] = useState<PacketRow[]>([]);
 
-  // the group-message handler needs the current markers to find the sender, but
-  // must not tear down the EventSources every time an advert lands
+  // the path handler needs the current markers to find the sender, but must
+  // not tear down the EventSource every time an advert lands
   const markersRef = useRef(locations);
   useEffect(() => {
     markersRef.current = markers;
@@ -172,16 +191,16 @@ export function LocationMap({ locations }: { locations: MapLocation[] }) {
   );
 
   const applyPath = useCallback(
-    (message: GroupMessageEvent): void => {
-      const resolved = resolveRoute(message.hops, findAnchor(markersRef.current, message.user));
+    (input: PathInput): void => {
+      const resolved = resolveRoute(input.hops, findAnchor(markersRef.current, input.anchorUser));
       if (resolved.segments.length === 0) return;
 
       nextPathId.current += 1;
       const id = `path-${nextPathId.current}`;
       const path: MapPath = {
         id,
-        user: message.user,
-        channel: message.channel,
+        label: input.label,
+        variant: input.variant,
         hops: resolved.hops,
         segments: resolved.segments,
         alternatives: resolved.alternatives,
@@ -222,20 +241,16 @@ export function LocationMap({ locations }: { locations: MapLocation[] }) {
       if (payload.kind === "advert") {
         applyPulse(payload.advert.publicKey);
       } else {
-        applyPath(payload.message);
+        applyPath(payload.path);
       }
     },
     [applyPulse, applyPath],
   );
 
   useEffect(() => {
-    const adverts = new EventSource("/api/push/adverts");
-    const groupMessages = new EventSource("/api/push/group-messages");
+    const source = new EventSource("/api/push");
 
-    const onAdvert = (event: Event): void => {
-      const advert = parseAdvert(event);
-      if (!advert) return;
-
+    const onAdvert = (advert: AdvertPush): void => {
       addPacket(
         {
           kind: "advert",
@@ -250,35 +265,81 @@ export function LocationMap({ locations }: { locations: MapLocation[] }) {
       applyPulse(advert.publicKey);
     };
 
-    const onGroupMessage = (event: Event): void => {
-      const message = parseGroupMessage(event);
-      if (!message) return;
+    const onGroupMessage = (message: GroupMessageEvent): void => {
+      const path: PathInput = {
+        label: `${message.user} → ${message.channel}`,
+        hops: message.hops,
+        variant: "message",
+        anchorUser: message.user,
+      };
 
       // record the packet even when there is nothing drawable about it
-      const unknown = message.hops.filter((hop) => hop.candidates.length === 0).length;
-      const hopCount = message.hops.length;
       addPacket(
         {
           kind: "group-message",
           receivedAt: message.receivedAt,
           title: message.user,
-          detail:
-            `${message.channel} · ` +
-            (hopCount === 0 ? "direct" : `${hopCount} hop${hopCount === 1 ? "" : "s"}`) +
-            (unknown > 0 ? ` (${unknown} unknown)` : ""),
+          detail: `${message.channel} · ${hopSummary(message.hops)}`,
         },
-        { kind: "group-message", message },
+        { kind: "path", path },
       );
 
-      applyPath(message);
+      applyPath(path);
     };
 
-    adverts.addEventListener("advert", onAdvert);
-    groupMessages.addEventListener("group-message", onGroupMessage);
+    const onRoutePacket = (packet: RoutePacketEvent): void => {
+      const path: PathInput = {
+        label: `${packet.packetType} packet`,
+        hops: packet.hops,
+        variant: "packet",
+      };
+
+      addPacket(
+        {
+          kind: "route-packet",
+          receivedAt: packet.receivedAt,
+          title: packet.packetType,
+          detail: hopSummary(packet.hops) + (packet.snr !== null ? ` · SNR ${packet.snr} dB` : ""),
+        },
+        { kind: "path", path },
+      );
+
+      applyPath(path);
+    };
+
+    source.onmessage = (event: MessageEvent<string>) => {
+      let value: unknown;
+      try {
+        value = JSON.parse(event.data);
+      } catch {
+        return;
+      }
+      if (typeof value !== "object" || value === null) return;
+
+      const record = value as Record<string, unknown>;
+      switch (record.type) {
+        case "advert": {
+          const advert = parseAdvert(record);
+          if (advert) onAdvert(advert);
+          break;
+        }
+        case "group-message": {
+          const message = parseGroupMessage(record);
+          if (message) onGroupMessage(message);
+          break;
+        }
+        case "route-packet": {
+          const packet = parseRoutePacket(record);
+          if (packet) onRoutePacket(packet);
+          break;
+        }
+        default:
+          break;
+      }
+    };
 
     return () => {
-      adverts.close();
-      groupMessages.close();
+      source.close();
       for (const timer of timers.current) clearTimeout(timer);
       timers.current.clear();
     };

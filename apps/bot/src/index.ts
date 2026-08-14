@@ -1,5 +1,6 @@
 import { AdvertHandler } from "./handler/AdvertHandler.js";
 import { GroupTextHandler } from "./handler/GroupTextHandler.js";
+import { RoutePacketHandler } from "./handler/RoutePacketHandler.js";
 import { PingResponder } from "./handler/responder/PingResponder.js";
 import { R0ute } from "./R0ute.js";
 
@@ -16,6 +17,7 @@ const r0ute = new R0ute({
   monitorPublicKey: "07a7bc43b98a6223b133d90bd5962348e02784d66e641afc11656183d70a19bf",
   handlers: [
     new AdvertHandler(),
+    new RoutePacketHandler(),
     new GroupTextHandler({
       responders: [
         new PingResponder({

@@ -13,6 +13,15 @@ export type LogRxData = {
 export enum PacketType {
   Advert = "ADVERT",
   GroupText = "GRP_TXT",
+  GroupData = "GRP_DATA",
+  TextMessage = "TXT_MSG",
+  Ack = "ACK",
+  Path = "PATH",
+  Trace = "TRACE",
+  Request = "REQ",
+  Response = "RESPONSE",
+  AnonRequest = "ANON_REQ",
+  RawCustom = "RAW_CUSTOM",
 }
 
 export type AdvertPayload = {

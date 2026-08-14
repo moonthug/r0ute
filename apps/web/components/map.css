@@ -35,13 +35,22 @@
   }
 }
 
-/* message routes glow; the chosen chain stronger than the alternatives */
+/* routed events glow; the chosen chain stronger than the alternatives.
+   orange = decoded group messages, violet = opaque route packets */
 .route-line {
   filter: drop-shadow(0 0 6px rgba(249, 115, 22, 0.8));
 }
 
 .route-alt {
   filter: drop-shadow(0 0 3px rgba(249, 115, 22, 0.4));
+}
+
+.route-line.route-line-packet {
+  filter: drop-shadow(0 0 6px rgba(167, 139, 250, 0.8));
+}
+
+.route-alt.route-alt-packet {
+  filter: drop-shadow(0 0 3px rgba(167, 139, 250, 0.4));
 }
 
 /* Direction arrows on message routes. The double class beats leaflet's own
@@ -77,6 +86,16 @@
 }
 
 .route-arrow.route-arrow-alt path {
+  filter: none;
+}
+
+/* arrows on route packets pick up the violet palette */
+.route-arrow.route-arrow-packet path {
+  fill: #a78bfa;
+  filter: drop-shadow(0 0 3px rgba(167, 139, 250, 0.6));
+}
+
+.route-arrow.route-arrow-alt.route-arrow-packet path {
   filter: none;
 }
 

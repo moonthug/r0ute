@@ -2,17 +2,19 @@
 
 export type PacketRow = {
   id: number;
-  kind: "advert" | "group-message";
+  kind: "advert" | "group-message" | "route-packet";
   receivedAt: string;
-  /** node name for adverts, sender for group messages */
+  /** node name for adverts, sender for messages, packet type for route packets */
   title: string;
-  /** coords for adverts; channel and route summary for group messages */
+  /** coords for adverts; channel/route summaries for the routed kinds */
   detail: string;
 };
 
+// badge colors match the map: cyan markers, orange message routes, violet packets
 const KIND_BADGE: Record<PacketRow["kind"], { text: string; className: string }> = {
-  advert: { text: "ADVERT", className: "bg-cyan-400 text-neutral-950" }, // matches the node markers
-  "group-message": { text: "MESSAGE", className: "bg-orange-500 text-neutral-950" }, // matches the routes
+  advert: { text: "ADVERT", className: "bg-cyan-400 text-neutral-950" },
+  "group-message": { text: "MESSAGE", className: "bg-orange-500 text-neutral-950" },
+  "route-packet": { text: "PKT", className: "bg-violet-400 text-neutral-950" },
 };
 
 function timeOf(iso: string): string {

@@ -1,6 +1,5 @@
-import { PUSH_CHANNELS } from "@r0ute/database";
-import { db } from "../../../../lib/db";
-import { pushEventStream } from "../../../../lib/push-stream";
+import { db } from "../../../lib/db";
+import { pushEventStream } from "../../../lib/push-stream";
 
 export const dynamic = "force-dynamic";
 
@@ -28,13 +27,18 @@ async function resolveHops(route: string[]): Promise<Hop[]> {
 }
 
 export function GET(request: Request): Response {
-  return pushEventStream(request, PUSH_CHANNELS.groupMessages, "group-message", async (event) => {
+  return pushEventStream(request, async (event) => {
+    // any event carrying a route gets its hop candidates attached
+    if (!("route" in event)) {
+      return event;
+    }
+
     let hops: Hop[];
     try {
       hops = await resolveHops(event.route);
     } catch (error) {
       // a failed lookup should degrade the path, not lose the event
-      console.error("[push/group-messages] hop resolution failed", error);
+      console.error("[push] hop resolution failed", error);
       hops = event.route.map((prefix) => ({ prefix, candidates: [] }));
     }
     return { ...event, hops };

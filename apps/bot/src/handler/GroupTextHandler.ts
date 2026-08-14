@@ -1,6 +1,6 @@
 import { createDecipheriv, createHmac } from "node:crypto";
 import type { Packet } from "@liamcottle/meshcore.js";
-import { PUSH_CHANNELS, push } from "@r0ute/database";
+import { push } from "@r0ute/database";
 
 import { type Channel, PacketType } from "../types.js";
 import type { Handler, HandlerContext } from "./Handler.js";
@@ -11,7 +11,7 @@ type GroupTextHandlerOptions = {
 };
 
 export class GroupTextHandler implements Handler {
-  public packetType: PacketType = PacketType.GroupText;
+  public packetTypes: PacketType[] = [PacketType.GroupText];
   private readonly responders: GroupResponderBase[];
 
   constructor(options: GroupTextHandlerOptions) {
@@ -75,7 +75,8 @@ export class GroupTextHandler implements Handler {
     const position = await locationManager.latestPositionFor(user);
 
     try {
-      await push(PUSH_CHANNELS.groupMessages, {
+      await push({
+        type: "group-message",
         channel: channel.name,
         user,
         route,

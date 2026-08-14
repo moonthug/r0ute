@@ -10,9 +10,11 @@ export type HandlerContext = {
   logger: Logger;
   locationManager: LocationManager;
   nodeName: string | undefined;
+  /** radio-reported reception quality for this packet */
+  rx: { snr: number; rssi: number };
 };
 
 export type Handler = {
-  packetType: PacketType;
+  packetTypes: PacketType[];
   onMessage: (packet: Packet, context: HandlerContext) => void | Promise<void>;
 };

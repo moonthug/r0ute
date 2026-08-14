@@ -1,11 +1,11 @@
 import type { Packet } from "@liamcottle/meshcore.js";
-import { PUSH_CHANNELS, push } from "@r0ute/database";
+import { push } from "@r0ute/database";
 
 import { PacketType } from "../types.js";
 import type { Handler, HandlerContext } from "./Handler.js";
 
 export class AdvertHandler implements Handler {
-  public packetType: PacketType = PacketType.Advert;
+  public packetTypes: PacketType[] = [PacketType.Advert];
   public async onMessage(packet: Packet, { locationManager, logger }: HandlerContext) {
     const advert = packet.parsePayloadTypeAdvert();
     const recorded = await locationManager.recordAdvert(advert);
@@ -20,7 +20,7 @@ export class AdvertHandler implements Handler {
       });
 
       try {
-        await push(PUSH_CHANNELS.adverts, recorded);
+        await push(recorded);
       } catch (error) {
         logger.warn({ error }, "Failed to publish advert push event");
       }

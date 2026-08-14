@@ -243,6 +243,7 @@ const farWest = node("bb77", 53.1, -4.0);
 let payloadBytes: number;
 {
   const worstCase: GroupMessagePush = {
+    type: "group-message",
     channel: "c".repeat(64),
     user: "u".repeat(64),
     // the widest hash is 3 bytes, and pathLen caps the hop count at 63
