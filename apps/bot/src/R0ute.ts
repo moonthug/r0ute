@@ -1,13 +1,14 @@
 import { createHash } from "node:crypto";
 import { Constants, NodeJSSerialConnection, Packet } from "@liamcottle/meshcore.js";
 import { type Logger, pino } from "pino";
-
+import { Heartbeat } from "./Heartbeat.js";
 import type { Handler } from "./handler/Handler.js";
 import { LocationManager } from "./LocationManager.js";
 import type { Channel, LogRxData } from "./types.js";
 
 type R0uteOptions = {
   device: string;
+  monitorPublicKey: string;
   handlers: Handler[];
 };
 
@@ -17,6 +18,7 @@ export class R0ute {
   private readonly handlers: Handler[];
   private readonly locationManager: LocationManager;
   private readonly logger: Logger;
+  private readonly heartbeat: Heartbeat;
 
   private channelMap: Map<number, Channel>;
   private selfName: string | undefined;
@@ -31,6 +33,12 @@ export class R0ute {
 
     this.logger = pino({
       level: process.env.LOG_LEVEL || "info",
+    });
+
+    this.heartbeat = new Heartbeat({
+      connection: this.connection,
+      logger: this.logger,
+      monitorPublicKey: options.monitorPublicKey,
     });
   }
 
@@ -51,6 +59,7 @@ export class R0ute {
   }
 
   async stop() {
+    this.heartbeat.stop();
     await this.connection.close();
     await this.locationManager.close();
   }
@@ -78,6 +87,8 @@ export class R0ute {
           secret: channel.secret,
         });
       });
+
+      this.heartbeat.start();
 
       this.logger.info(
         { name: this.selfName, channels: this.channelMap.size },

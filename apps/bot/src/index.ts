@@ -13,6 +13,7 @@ if (!process.env.DATABASE_URL) {
 
 const r0ute = new R0ute({
   device: process.env.DEVICE,
+  monitorPublicKey: "07a7bc43b98a6223b133d90bd5962348e02784d66e641afc11656183d70a19bf",
   handlers: [
     new AdvertHandler(),
     new GroupTextHandler({
