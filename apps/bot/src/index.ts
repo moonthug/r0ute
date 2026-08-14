@@ -19,7 +19,7 @@ const r0ute = new R0ute({
     new GroupTextHandler({
       responders: [
         new PingResponder({
-          channels: ["#test", "#bot-test-test"],
+          channels: process.env.PING_RESPONDER_CHANNELS?.split(",") ?? [],
           keywords: ["test"],
           location: [-1.5428249, 53.1442947],
         }),

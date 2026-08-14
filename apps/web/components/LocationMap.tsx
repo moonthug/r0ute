@@ -5,6 +5,7 @@ import nextDynamic from "next/dynamic";
 import { useEffect, useRef, useState } from "react";
 import { type Anchor, type Candidate, type Hop, resolveRoute } from "../lib/resolve-route";
 import type { MapLocation, MapPath } from "./LeafletMap";
+import { PacketFeed, type PacketRow } from "./PacketFeed";
 
 // leaflet touches `window` at import time, so the map must never render on the server
 const LeafletMap = nextDynamic(() => import("./LeafletMap"), {
@@ -15,6 +16,7 @@ const LeafletMap = nextDynamic(() => import("./LeafletMap"), {
 const PULSE_MS = 4_000; // covers the three CSS iterations, then the class is dropped
 const PATH_TTL_MS = 20_000;
 const MAX_PATHS = 10;
+const MAX_PACKETS = 50;
 
 type GroupMessageEvent = {
   channel: string;
@@ -118,6 +120,8 @@ export function LocationMap({ locations }: { locations: MapLocation[] }) {
   const [markers, setMarkers] = useState<MapLocation[]>(locations);
   const [pulses, setPulses] = useState<Record<string, number>>({});
   const [paths, setPaths] = useState<MapPath[]>([]);
+  const [packets, setPackets] = useState<PacketRow[]>([]);
+  const nextPacketId = useRef(0);
 
   // the group-message handler needs the current markers to find the sender, but
   // must not tear down the EventSources every time an advert lands
@@ -144,9 +148,22 @@ export function LocationMap({ locations }: { locations: MapLocation[] }) {
       timers.add(timer);
     };
 
+    const addPacket = (packet: Omit<PacketRow, "id">): void => {
+      nextPacketId.current += 1;
+      const row = { ...packet, id: nextPacketId.current };
+      setPackets((current) => [row, ...current].slice(0, MAX_PACKETS));
+    };
+
     const onAdvert = (event: Event): void => {
       const advert = parseAdvert(event);
       if (!advert) return;
+
+      addPacket({
+        kind: "advert",
+        receivedAt: advert.receivedAt,
+        title: advert.name ?? `${advert.publicKey.slice(0, 12)}…`,
+        detail: `${advert.lat.toFixed(5)}, ${advert.lon.toFixed(5)}`,
+      });
 
       const seq = (pulseSeq.current.get(advert.publicKey) ?? 0) + 1;
       pulseSeq.current.set(advert.publicKey, seq);
@@ -168,6 +185,19 @@ export function LocationMap({ locations }: { locations: MapLocation[] }) {
     const onGroupMessage = (event: Event): void => {
       const message = parseGroupMessage(event);
       if (!message) return;
+
+      // record the packet even when there is nothing drawable about it
+      const unknown = message.hops.filter((hop) => hop.candidates.length === 0).length;
+      const hopCount = message.hops.length;
+      addPacket({
+        kind: "group-message",
+        receivedAt: message.receivedAt,
+        title: message.user,
+        detail:
+          `${message.channel} · ` +
+          (hopCount === 0 ? "direct" : `${hopCount} hop${hopCount === 1 ? "" : "s"}`) +
+          (unknown > 0 ? ` (${unknown} unknown)` : ""),
+      });
 
       const resolved = resolveRoute(message.hops, findAnchor(markersRef.current, message.user));
       if (resolved.segments.length === 0) return;
@@ -199,5 +229,12 @@ export function LocationMap({ locations }: { locations: MapLocation[] }) {
     };
   }, []);
 
-  return <LeafletMap locations={markers} pulses={pulses} paths={paths} />;
+  return (
+    <div style={{ display: "flex", height: "100%", minHeight: 0 }}>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <LeafletMap locations={markers} pulses={pulses} paths={paths} />
+      </div>
+      <PacketFeed rows={packets} />
+    </div>
+  );
 }
