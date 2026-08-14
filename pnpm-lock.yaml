@@ -19,7 +19,7 @@ importers:
     dependencies:
       '@liamcottle/meshcore.js':
         specifier: github:moonthug/meshcore.js
-        version: https://codeload.github.com/moonthug/meshcore.js/tar.gz/cb75a9c5f41b64796ff0361f125b1c1604ba311f
+        version: https://codeload.github.com/moonthug/meshcore.js/tar.gz/dcaf07b641eae97e9df087c1c920926de86b100a
       '@r0ute/database':
         specifier: workspace:*
         version: link:../../packages/database
@@ -530,8 +530,8 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@liamcottle/meshcore.js@https://codeload.github.com/moonthug/meshcore.js/tar.gz/cb75a9c5f41b64796ff0361f125b1c1604ba311f':
-    resolution: {tarball: https://codeload.github.com/moonthug/meshcore.js/tar.gz/cb75a9c5f41b64796ff0361f125b1c1604ba311f}
+  '@liamcottle/meshcore.js@https://codeload.github.com/moonthug/meshcore.js/tar.gz/dcaf07b641eae97e9df087c1c920926de86b100a':
+    resolution: {tarball: https://codeload.github.com/moonthug/meshcore.js/tar.gz/dcaf07b641eae97e9df087c1c920926de86b100a}
     version: 1.14.0
 
   '@next/env@16.3.0':
@@ -2426,7 +2426,7 @@ snapshots:
   '@img/sharp-win32-x64@0.35.3':
     optional: true
 
-  '@liamcottle/meshcore.js@https://codeload.github.com/moonthug/meshcore.js/tar.gz/cb75a9c5f41b64796ff0361f125b1c1604ba311f':
+  '@liamcottle/meshcore.js@https://codeload.github.com/moonthug/meshcore.js/tar.gz/dcaf07b641eae97e9df087c1c920926de86b100a':
     dependencies:
       '@noble/curves': 1.9.7
       serialport: 13.0.0
