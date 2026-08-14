@@ -31,8 +31,7 @@ export class Heartbeat {
 
   constructor(options: HeartbeatOptions) {
     this.connection = options.connection;
-    this.logger = options.logger;
-    // the key is hex on the wire — encoding it as utf8 would address nobody
+    this.logger = options.logger.child({ component: "Heartbeat" });
     this.monitorPublicKey = Buffer.from(options.monitorPublicKey, "hex");
     this.intervalMs = options.intervalMs ?? DEFAULT_INTERVAL_MS;
   }
@@ -61,10 +60,15 @@ export class Heartbeat {
 
     const uptime = formatUptime(Date.now() - startedAt.getTime());
     try {
-      await this.connection.sendTextMessage(this.monitorPublicKey, `Up time: ${uptime}`);
-      this.logger.debug({ uptime }, "Heartbeat sent");
+      const contact = await this.connection.findContactByPublicKeyPrefix(this.monitorPublicKey);
+
+      if (contact) {
+        await this.connection.sendTextMessage(this.monitorPublicKey, `Up time: ${uptime}`);
+        this.logger.debug({ uptime }, "Heartbeat sent");
+      } else {
+        this.logger.warn("Contact not found");
+      }
     } catch (error) {
-      // a missed heartbeat is a log line, never a crash
       this.logger.warn({ error }, "Heartbeat send failed");
     }
   }
