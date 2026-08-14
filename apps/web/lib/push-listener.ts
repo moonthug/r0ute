@@ -10,7 +10,7 @@ import { Client, escapeIdentifier, type Notification } from "pg";
 const INITIAL_BACKOFF_MS = 1_000;
 const MAX_BACKOFF_MS = 30_000;
 
-type PushPayloads = {
+export type PushPayloads = {
   [PUSH_CHANNELS.adverts]: AdvertPush;
   [PUSH_CHANNELS.groupMessages]: GroupMessagePush;
 };
