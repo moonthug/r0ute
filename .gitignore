@@ -137,3 +137,4 @@ dist
 # Prisma generated client
 packages/database/src/generated/
 .turbo/
+.playwright-mcp/
