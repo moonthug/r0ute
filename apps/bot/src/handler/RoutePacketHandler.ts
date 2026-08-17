@@ -4,11 +4,6 @@ import { push } from "@r0ute/database";
 import { PacketType } from "../types.js";
 import type { Handler, HandlerContext } from "./Handler.js";
 
-/**
- * Adverts and group texts have dedicated handlers; every other flood-routed
- * packet type still carries a drawable path, which is worth pushing to the map
- * even though the payload itself stays opaque.
- */
 export class RoutePacketHandler implements Handler {
   public packetTypes: PacketType[] = [
     PacketType.GroupData,

@@ -2,19 +2,25 @@ generator client {
   provider            = "prisma-client"
   output              = "../src/generated"
   importFileExtension = "ts"
+  previewFeatures     = ["postgresqlExtensions"]
 }
 
 datasource db {
-  provider = "postgresql"
+  provider   = "postgresql"
+  extensions = [postgis]
 }
 
-model AdvertLocation {
+model Location {
   publicKey       String   @id
   name            String?
   lat             Float
   lon             Float
+  /// PostGIS point derived from lat/lon by the database (generated column) so
+  /// spatial queries can use the GIST index; prisma cannot map this type
+  point           Unsupported("geography(Point, 4326)") @default(dbgenerated())
   advertTimestamp DateTime
   receivedAt      DateTime
 
   @@index([name])
+  @@index([point], type: Gist)
 }

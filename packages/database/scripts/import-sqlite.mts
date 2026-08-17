@@ -87,14 +87,14 @@ const db = createPrismaClient(process.env.DATABASE_URL);
 
 for (const row of rows) {
   const { publicKey, ...data } = row;
-  await db.advertLocation.upsert({
+  await db.location.upsert({
     where: { publicKey },
     create: { publicKey, ...data },
     update: data,
   });
 }
 
-const total = await db.advertLocation.count();
+const total = await db.location.count();
 await db.$disconnect();
 console.log(
   `imported ${rows.length} rows from ${sqlitePath}` +

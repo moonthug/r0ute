@@ -17,9 +17,13 @@ services:
       DEVICE: /dev/ttyUSB0
       DATABASE_URL: postgresql://r0ute:r0ute@postgres:5432/r0ute
       LOG_LEVEL: info
+      # optional MeshRank observer uplink (https://meshrank.net) — set the IATA
+      # code of your region to enable; defaults to the public broker
+      # MESHRANK_IATA: MAN
+      # MESHRANK_MQTT_URL: mqtts://meshrank.net:8883
 
   postgres:
-    image: postgres:17-alpine
+    image: imresamu/postgis:17-3.5-alpine
     restart: unless-stopped
     environment:
       POSTGRES_USER: r0ute

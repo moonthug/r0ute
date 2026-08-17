@@ -40,7 +40,7 @@ export class GroupTextHandler implements Handler {
   }
 
   public async onMessage(packet: Packet, context: HandlerContext) {
-    const { connection, channelMap, locationManager, logger, nodeName } = context;
+    const { connection, channelMap, locationService, logger, nodeName } = context;
 
     const route = packet.getPathHashes().map((hash) => Buffer.from(hash).toString("hex"));
 
@@ -72,7 +72,8 @@ export class GroupTextHandler implements Handler {
       return;
     }
 
-    const position = await locationManager.latestPositionFor(user);
+    const location = await locationService.getLocationByName(user);
+    const position = location ? { coord: [location.lon, location.lat] as [number, number] } : null;
 
     try {
       await push({

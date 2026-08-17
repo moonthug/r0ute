@@ -1,20 +1,20 @@
-import type { NodeJSSerialConnection, Packet } from "@liamcottle/meshcore.js";
+import type { NodeJSSerialConnection, Packet, SelfInfo } from "@liamcottle/meshcore.js";
 import type { Logger } from "pino";
 
-import type { LocationManager } from "../LocationManager.js";
+import type { LocationService } from "../service/LocationService.js";
 import type { Channel, PacketType } from "../types.js";
 
 export type HandlerContext = {
   connection: NodeJSSerialConnection;
   channelMap: Map<number, Channel>;
   logger: Logger;
-  locationManager: LocationManager;
+  locationService: LocationService;
   nodeName: string | undefined;
-  /** radio-reported reception quality for this packet */
-  rx: { snr: number; rssi: number };
+  rx: { snr: number; rssi: number; raw: Uint8Array };
 };
 
-export type Handler = {
+export interface Handler {
   packetTypes: PacketType[];
+  initialise?: (selfInfo: SelfInfo) => Promise<void>;
   onMessage: (packet: Packet, context: HandlerContext) => void | Promise<void>;
-};
+}

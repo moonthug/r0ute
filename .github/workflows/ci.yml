@@ -37,8 +37,8 @@ jobs:
         include:
           - image: bot
             dockerfile: apps/bot/Dockerfile
-          - image: web
-            dockerfile: apps/web/Dockerfile
+          - image: admin
+            dockerfile: apps/admin/Dockerfile
     steps:
       - uses: actions/checkout@v4
 

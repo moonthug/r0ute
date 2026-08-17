@@ -15,7 +15,7 @@ async function resolveHops(route: string[]): Promise<Hop[]> {
   const prefixes = [...new Set(route)];
   const matches = await Promise.all(
     prefixes.map((prefix) =>
-      db.advertLocation.findMany({
+      db.location.findMany({
         where: { publicKey: { startsWith: prefix } },
         select: { publicKey: true, name: true, lat: true, lon: true },
       }),

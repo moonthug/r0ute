@@ -1,6 +1,6 @@
 /**
  * Assertions for lib/resolve-route.ts. The repo has no test framework, so this
- * is a plain script: `pnpm --filter @r0ute/web check`.
+ * is a plain script: `pnpm --filter @r0ute/admin check`.
  */
 import assert from "node:assert/strict";
 import type { GroupMessagePush } from "@r0ute/database";

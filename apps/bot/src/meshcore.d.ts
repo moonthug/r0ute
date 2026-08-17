@@ -1,6 +1,13 @@
 import "@liamcottle/meshcore.js";
 
 declare module "@liamcottle/meshcore.js" {
+  interface SelfInfo {
+    radioFreq: number; // kHz
+    radioBw: number; // Hz
+    radioSf: number;
+    radioCr: number;
+  }
+
   type RouteTypeString = "TRANSPORT_FLOOD" | "FLOOD" | "DIRECT" | "TRANSPORT_DIRECT";
 
   type PayloadTypeString =

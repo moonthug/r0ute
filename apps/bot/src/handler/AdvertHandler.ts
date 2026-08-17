@@ -6,9 +6,9 @@ import type { Handler, HandlerContext } from "./Handler.js";
 
 export class AdvertHandler implements Handler {
   public packetTypes: PacketType[] = [PacketType.Advert];
-  public async onMessage(packet: Packet, { locationManager, logger }: HandlerContext) {
+  public async onMessage(packet: Packet, { locationService, logger }: HandlerContext) {
     const advert = packet.parsePayloadTypeAdvert();
-    const recorded = await locationManager.recordAdvert(advert);
+    const recorded = await locationService.upsertLocationForAdvert(advert);
 
     if (recorded) {
       logger.debug({
@@ -20,7 +20,15 @@ export class AdvertHandler implements Handler {
       });
 
       try {
-        await push(recorded);
+        await push({
+          type: "advert",
+          publicKey: recorded.publicKey,
+          name: recorded.name,
+          lat: recorded.lat,
+          lon: recorded.lon,
+          advertTimestamp: recorded.advertTimestamp.toISOString(),
+          receivedAt: recorded.receivedAt.toISOString(),
+        });
       } catch (error) {
         logger.warn({ error }, "Failed to publish advert push event");
       }

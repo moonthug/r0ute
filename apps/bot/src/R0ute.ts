@@ -1,9 +1,12 @@
 import { createHash } from "node:crypto";
-import { Constants, NodeJSSerialConnection, Packet } from "@liamcottle/meshcore.js";
+import { Constants, NodeJSSerialConnection, Packet, type SelfInfo } from "@liamcottle/meshcore.js";
+import { type Database, getDatabase } from "@r0ute/database";
 import { type Logger, pino } from "pino";
+
+import { env } from "./env.js";
 import { Heartbeat } from "./Heartbeat.js";
 import type { Handler } from "./handler/Handler.js";
-import { LocationManager } from "./LocationManager.js";
+import { LocationService } from "./service/LocationService.ts";
 import type { Channel, LogRxData, PacketType } from "./types.js";
 
 type R0uteOptions = {
@@ -16,23 +19,25 @@ export class R0ute {
   private readonly connection: NodeJSSerialConnection;
   private readonly device: string;
   private readonly handlers: Handler[];
-  private readonly locationManager: LocationManager;
+  private readonly locationService: LocationService;
   private readonly logger: Logger;
   private readonly heartbeat: Heartbeat;
+  private readonly db: Database;
 
   private channelMap: Map<number, Channel>;
-  private selfName: string | undefined;
+  private selfInfo?: SelfInfo;
 
   constructor(options: R0uteOptions) {
     this.connection = new NodeJSSerialConnection(options.device);
     this.device = options.device;
     this.handlers = options.handlers;
 
-    this.locationManager = new LocationManager();
+    this.db = getDatabase();
+    this.locationService = new LocationService(this.db);
     this.channelMap = new Map<number, Channel>();
 
     this.logger = pino({
-      level: process.env.LOG_LEVEL || "info",
+      level: env.LOG_LEVEL,
     });
 
     this.heartbeat = new Heartbeat({
@@ -43,6 +48,8 @@ export class R0ute {
   }
 
   async start(): Promise<void> {
+    await this.db.$connect();
+
     this.connection.on("connected", this.onConnected.bind(this));
     // biome-ignore lint/style/noNonNullAssertion: PushCodes are always defined
     this.connection.on(Constants.PushCodes.LogRxData!, this.onLogRxData.bind(this));
@@ -59,17 +66,17 @@ export class R0ute {
   }
 
   async stop() {
+    await this.db.$disconnect();
+
     this.heartbeat.stop();
     await this.connection.close();
-    await this.locationManager.close();
   }
 
   private async onConnected() {
     this.logger.info("Connected");
 
     try {
-      const selfInfo = await this.connection.getSelfInfo();
-      this.selfName = selfInfo.name;
+      this.selfInfo = await this.connection.getSelfInfo();
 
       const channels = await this.connection.getChannels();
       this.channelMap = new Map<number, Channel>();
@@ -88,10 +95,16 @@ export class R0ute {
         });
       });
 
+      for (const handler of this.handlers) {
+        if (handler.initialise) {
+          await handler.initialise(this.selfInfo);
+        }
+      }
+
       this.heartbeat.start();
 
       this.logger.info(
-        { name: this.selfName, channels: this.channelMap.size },
+        { name: this.selfInfo.name, channels: this.channelMap.size },
         "Setup complete — monitoring",
       );
     } catch (e) {
@@ -111,10 +124,10 @@ export class R0ute {
           await handler.onMessage(packet, {
             connection: this.connection,
             channelMap: this.channelMap,
-            locationManager: this.locationManager,
+            locationService: this.locationService,
             logger: this.logger,
-            nodeName: this.selfName,
-            rx: { snr: data.lastSnr, rssi: data.lastRssi },
+            nodeName: this.selfInfo?.name ?? "R0ute Bot",
+            rx: { snr: data.lastSnr, rssi: data.lastRssi, raw: data.raw },
           });
         }
       }

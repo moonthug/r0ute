@@ -17,15 +17,15 @@ export type GroupMessageContext = MessageContext & {
   channel: Channel;
 };
 
-export type Responder = {
+export interface Responder {
   keywords?: string[];
-};
+}
 
 export type ResponderOptions = {
   keywords?: string[];
 };
 
-abstract class ResponderBase {
+abstract class ResponderBase implements Responder {
   public readonly keywords: string[];
 
   protected constructor(options: { keywords?: string[] }) {
