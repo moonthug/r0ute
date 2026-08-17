@@ -30,7 +30,6 @@ export class MeshRankHandler implements Handler {
 
   public onMessage(packet: Packet, { logger, rx }: HandlerContext) {
     try {
-      console.log("Publishing packet to MeshRank");
       this.meshRank.publishPacket(rx.raw, packet, rx);
     } catch (error) {
       logger.warn({ error }, "Failed to publish packet to MeshRank");
