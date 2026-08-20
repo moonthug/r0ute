@@ -52,7 +52,7 @@ container.register(RESPONDER, {
     new PathResponder(
       {
         channels: env.PING_RESPONDER_CHANNELS,
-        keywords: ["path"],
+        keywords: ["path", "test"],
         baseUrl: env.BASE_URL,
       },
       container.resolve(PathRequestService),
