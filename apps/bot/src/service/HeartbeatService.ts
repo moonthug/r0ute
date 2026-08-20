@@ -37,7 +37,7 @@ export class HeartbeatService {
     this.stop();
     this.startedAt = new Date();
 
-    this.sendMessageToMonitor("Bot started");
+    void this.sendMessageToMonitor("Bot started");
 
     this.timer = setInterval(() => {
       void this.beat();
