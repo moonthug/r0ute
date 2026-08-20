@@ -19,10 +19,10 @@ export async function generateMetadata({ params }: PathPageProps) {
 
 export default async function PathRequestPage({ params }: PathPageProps) {
   const { id } = await params;
-  if (!/^\d{1,9}$/.test(id)) notFound();
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) notFound();
 
   const pathRequest = await db.pathRequest.findUnique({
-    where: { id: Number.parseInt(id, 10) },
+    where: { id },
     include: { path: { orderBy: { position: "asc" } } },
   });
   if (!pathRequest) notFound();

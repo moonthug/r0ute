@@ -33,7 +33,7 @@ model Location {
 }
 
 model PathRequest {
-  id               Int       @id @default(autoincrement())
+  id               String    @id @default(dbgenerated("gen_random_uuid()"))
   channelId        Int
   userName         String
   requestTimestamp DateTime
@@ -46,7 +46,7 @@ model PathRequest {
 
 model PathHop {
   pathRequest       PathRequest @relation(fields: [pathRequestId], references: [id], onDelete: Cascade)
-  pathRequestId     Int
+  pathRequestId     String
   position          Int
   hash              String
   location          Location?   @relation(fields: [locationPublicKey], references: [publicKey])
