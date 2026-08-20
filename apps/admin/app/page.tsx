@@ -1,4 +1,5 @@
 import { isValidCoordinate } from "@r0ute/database";
+
 import { LocationMap } from "../components/LocationMap";
 import { db } from "../lib/db";
 import { LEGEND } from "../lib/node-types";

@@ -1,8 +1,10 @@
 "use client";
 
-import type { AdvertPush, NodeType } from "@r0ute/database";
 import nextDynamic from "next/dynamic";
 import { useCallback, useEffect, useRef, useState } from "react";
+
+import type { AdvertPush, NodeType } from "@r0ute/database";
+
 import { NODE_STYLES, nodeStyle } from "../lib/node-types";
 import { type Anchor, type Candidate, type Hop, resolveRoute } from "../lib/resolve-route";
 import type { MapLocation, MapPath, PathVariant } from "./LeafletMap";

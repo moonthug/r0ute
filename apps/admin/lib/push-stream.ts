@@ -1,4 +1,5 @@
 import type { PushEvent } from "@r0ute/database";
+
 import { subscribe } from "./push-listener";
 
 const HEARTBEAT_MS = 20_000;

@@ -3,7 +3,9 @@
  * is a plain script: `pnpm --filter @r0ute/admin check`.
  */
 import assert from "node:assert/strict";
+
 import type { GroupMessagePush } from "@r0ute/database";
+
 import { type Candidate, type Hop, resolveRoute, segmentArrows } from "../lib/resolve-route.ts";
 
 function node(publicKey: string, lat: number, lon: number): Candidate {

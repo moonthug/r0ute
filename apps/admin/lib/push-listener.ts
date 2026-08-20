@@ -1,6 +1,8 @@
 import { EventEmitter } from "node:events";
-import { PUSH_CHANNEL, type PushEvent } from "@r0ute/database";
+
 import { Client, escapeIdentifier, type Notification } from "pg";
+
+import { PUSH_CHANNEL, type PushEvent } from "@r0ute/database";
 
 const INITIAL_BACKOFF_MS = 1_000;
 const MAX_BACKOFF_MS = 30_000;

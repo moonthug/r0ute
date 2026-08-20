@@ -2,7 +2,7 @@
 
 import "leaflet/dist/leaflet.css";
 import "./map.css";
-import type { NodeType } from "@r0ute/database";
+
 import { type DivIcon, divIcon } from "leaflet";
 import { useEffect, useState } from "react";
 import {
@@ -15,6 +15,9 @@ import {
   Tooltip,
   useMap,
 } from "react-leaflet";
+
+import type { NodeType } from "@r0ute/database";
+
 import { nodeStyle } from "../lib/node-types";
 import {
   type AlternativeEdge,
