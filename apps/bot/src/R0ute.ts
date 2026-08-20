@@ -1,51 +1,35 @@
 import { createHash } from "node:crypto";
-import { Constants, NodeJSSerialConnection, Packet, type SelfInfo } from "@liamcottle/meshcore.js";
-import { type Database, getDatabase } from "@r0ute/database";
-import { type Logger, pino } from "pino";
 
-import { env } from "./env.js";
-import { Heartbeat } from "./Heartbeat.js";
-import type { Handler } from "./handler/Handler.js";
-import { LocationService } from "./service/LocationService.ts";
-import type { Channel, LogRxData, PacketType } from "./types.js";
+import {
+  Constants,
+  type NodeJSSerialConnection,
+  Packet,
+  type SelfInfo,
+} from "@liamcottle/meshcore.js";
+import type { Logger } from "pino";
+import { inject, injectAll, singleton } from "tsyringe";
 
-type R0uteOptions = {
-  device: string;
-  monitorPublicKey: string;
-  handlers: Handler[];
-};
+import type { Database } from "@r0ute/database";
 
+import type { Env } from "@/env.ts";
+import type { Handler } from "@/handler/Handler.ts";
+import { HeartbeatService } from "@/service/HeartbeatService.ts";
+import { CONNECTION, DATABASE, ENV, HANDLER, LOGGER } from "@/tokens.ts";
+import type { Channel, LogRxData, PacketType } from "@/types.ts";
+
+@singleton()
 export class R0ute {
-  private readonly connection: NodeJSSerialConnection;
-  private readonly device: string;
-  private readonly handlers: Handler[];
-  private readonly locationService: LocationService;
-  private readonly logger: Logger;
-  private readonly heartbeat: Heartbeat;
-  private readonly db: Database;
-
-  private channelMap: Map<number, Channel>;
+  private channelMap = new Map<number, Channel>();
   private selfInfo?: SelfInfo;
 
-  constructor(options: R0uteOptions) {
-    this.connection = new NodeJSSerialConnection(options.device);
-    this.device = options.device;
-    this.handlers = options.handlers;
-
-    this.db = getDatabase();
-    this.locationService = new LocationService(this.db);
-    this.channelMap = new Map<number, Channel>();
-
-    this.logger = pino({
-      level: env.LOG_LEVEL,
-    });
-
-    this.heartbeat = new Heartbeat({
-      connection: this.connection,
-      logger: this.logger,
-      monitorPublicKey: options.monitorPublicKey,
-    });
-  }
+  constructor(
+    @inject(CONNECTION) private readonly connection: NodeJSSerialConnection,
+    @inject(DATABASE) private readonly db: Database,
+    @inject(ENV) private readonly env: Env,
+    @injectAll(HANDLER) private readonly handlers: Handler[],
+    @inject(HeartbeatService) private readonly heartbeat: HeartbeatService,
+    @inject(LOGGER) private readonly logger: Logger,
+  ) {}
 
   async start(): Promise<void> {
     await this.db.$connect();
@@ -60,7 +44,7 @@ export class R0ute {
       this.logger.error(e, "Error connecting to radio");
     });
 
-    this.logger.info({ device: this.device }, "Connecting to radio");
+    this.logger.info({ device: this.env.DEVICE }, "Connecting to radio");
 
     await this.connection.connect();
   }
@@ -112,6 +96,7 @@ export class R0ute {
       process.exit(1);
     }
   }
+
   private async onLogRxData(data: LogRxData) {
     try {
       const packet = Packet.fromBytes(data.raw);
@@ -124,7 +109,6 @@ export class R0ute {
           await handler.onMessage(packet, {
             connection: this.connection,
             channelMap: this.channelMap,
-            locationService: this.locationService,
             logger: this.logger,
             nodeName: this.selfInfo?.name ?? "R0ute Bot",
             rx: { snr: data.lastSnr, rssi: data.lastRssi, raw: data.raw },

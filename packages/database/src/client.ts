@@ -1,4 +1,5 @@
 import { PrismaPg } from "@prisma/adapter-pg";
+
 import { PrismaClient } from "./generated/client.ts";
 
 export function createPrismaClient(connectionString: string) {

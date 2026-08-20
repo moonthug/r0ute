@@ -1,14 +1,17 @@
 import { createHash } from "node:crypto";
+
 import type { Packet } from "@liamcottle/meshcore.js";
 import mqtt, { type MqttClient } from "mqtt";
 import type { Logger } from "pino";
+import { inject, singleton } from "tsyringe";
+
+import { LOGGER, MESHRANK_OPTIONS } from "@/tokens.ts";
 
 const DEFAULT_STATUS_INTERVAL_MS = 5 * 60 * 1000;
 const CLIENT_ID_PREFIX = "meshcore_";
 const PACKET_HASH_BYTES = 8;
 
 export type MeshRankOptions = {
-  logger: Logger;
   url: string;
   registrationKey: string;
   clientVersion: string;
@@ -48,6 +51,7 @@ function pad2(n: number): string {
   return String(n).padStart(2, "0");
 }
 
+@singleton()
 export class MeshRankService {
   private readonly logger: Logger;
   private readonly options: {
@@ -64,8 +68,8 @@ export class MeshRankService {
   private statusTimer: ReturnType<typeof setInterval> | null = null;
   private stats = { packetsRx: 0, publishFailures: 0 };
 
-  constructor(options: MeshRankOptions) {
-    this.logger = options.logger.child({ component: "MeshRank" });
+  constructor(@inject(LOGGER) logger: Logger, @inject(MESHRANK_OPTIONS) options: MeshRankOptions) {
+    this.logger = logger.child({ component: "MeshRank" });
 
     this.options = {
       url: options.url,

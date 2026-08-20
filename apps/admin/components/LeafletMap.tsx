@@ -2,6 +2,7 @@
 
 import "leaflet/dist/leaflet.css";
 import "./map.css";
+import type { NodeType } from "@r0ute/database";
 import { type DivIcon, divIcon } from "leaflet";
 import { useEffect, useState } from "react";
 import {
@@ -14,6 +15,7 @@ import {
   Tooltip,
   useMap,
 } from "react-leaflet";
+import { nodeStyle } from "../lib/node-types";
 import {
   type AlternativeEdge,
   describeHop,
@@ -25,6 +27,7 @@ import {
 export type MapLocation = {
   publicKey: string;
   name: string | null;
+  nodeType: NodeType | null;
   lat: number;
   lon: number;
   advertTimestamp: string;
@@ -139,13 +142,14 @@ export default function LeafletMap({
         // its key steady and skips the pulse until the user closes it
         const frozen = openPopup?.publicKey === location.publicKey ? openPopup.seq : null;
         const pulse = frozen ?? pulses[location.publicKey];
+        const style = nodeStyle(location.nodeType);
         return (
           <CircleMarker
             // className cannot be changed after mount, so the key carries the
             // pulse counter and the marker remounts with the animated class
             key={`${location.publicKey}:${pulse ?? 0}`}
             center={[location.lat, location.lon]}
-            radius={8}
+            radius={style.radius}
             eventHandlers={{
               popupopen: () =>
                 setOpenPopup({
@@ -160,13 +164,15 @@ export default function LeafletMap({
             pathOptions={{
               color: "#0a0a0a", // dark ring so overlapping markers stay separable
               weight: 2,
-              fillColor: "#22d3ee",
+              fillColor: style.color,
               fillOpacity: 0.9,
-              className: pulse ? "node-marker pulse" : "node-marker",
+              className: `node-marker ${style.className}${pulse ? " pulse" : ""}`,
             }}
           >
             <Popup>
               <strong>{location.name ?? `${location.publicKey.slice(0, 12)}…`}</strong>
+              <br />
+              <span style={{ color: style.color }}>{style.label}</span>
               <br />
               Last advert: {new Date(location.advertTimestamp).toLocaleString()}
               <br />

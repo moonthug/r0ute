@@ -1,4 +1,5 @@
 import { type Database, getDatabase } from "./client.ts";
+import type { NodeType } from "./generated/enums.ts";
 
 /** every push event travels over one NOTIFY channel, discriminated by `type` */
 export const PUSH_CHANNEL = "push_events";
@@ -7,6 +8,7 @@ export type AdvertPush = {
   type: "advert";
   publicKey: string;
   name: string | null;
+  nodeType: NodeType | null;
   lat: number;
   lon: number;
   advertTimestamp: string; // ISO

@@ -1,8 +1,9 @@
 "use client";
 
-import type { AdvertPush } from "@r0ute/database";
+import type { AdvertPush, NodeType } from "@r0ute/database";
 import nextDynamic from "next/dynamic";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { NODE_STYLES, nodeStyle } from "../lib/node-types";
 import { type Anchor, type Candidate, type Hop, resolveRoute } from "../lib/resolve-route";
 import type { MapLocation, MapPath, PathVariant } from "./LeafletMap";
 import { PacketFeed, type PacketRow } from "./PacketFeed";
@@ -69,7 +70,7 @@ function parseHops(value: unknown): Hop[] | null {
 }
 
 function parseAdvert(value: Record<string, unknown>): AdvertPush | null {
-  const { publicKey, name, lat, lon, advertTimestamp, receivedAt } = value;
+  const { publicKey, name, nodeType, lat, lon, advertTimestamp, receivedAt } = value;
   if (typeof publicKey !== "string" || typeof lat !== "number" || typeof lon !== "number") {
     return null;
   }
@@ -79,6 +80,8 @@ function parseAdvert(value: Record<string, unknown>): AdvertPush | null {
     type: "advert",
     publicKey,
     name: typeof name === "string" ? name : null,
+    nodeType:
+      typeof nodeType === "string" && nodeType in NODE_STYLES ? (nodeType as NodeType) : null,
     lat,
     lon,
     advertTimestamp: typeof advertTimestamp === "string" ? advertTimestamp : now,
@@ -256,7 +259,7 @@ export function LocationMap({ locations }: { locations: MapLocation[] }) {
           kind: "advert",
           receivedAt: advert.receivedAt,
           title: advert.name ?? `${advert.publicKey.slice(0, 12)}…`,
-          detail: `${advert.lat.toFixed(5)}, ${advert.lon.toFixed(5)}`,
+          detail: `${nodeStyle(advert.nodeType).label} · ${advert.lat.toFixed(5)}, ${advert.lon.toFixed(5)}`,
         },
         { kind: "advert", advert },
       );

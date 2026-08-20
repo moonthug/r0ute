@@ -1,24 +1,16 @@
 import type { Packet, SelfInfo } from "@liamcottle/meshcore.js";
-import { pino } from "pino";
-import { env } from "../env.ts";
+import { inject, injectable } from "tsyringe";
 
-import { MeshRankService } from "../service/MeshRankService.ts";
-import { PacketType } from "../types.ts";
+import { MeshRankService } from "@/service/MeshRankService.ts";
+import { PacketType } from "@/types.ts";
+
 import type { Handler, HandlerContext } from "./Handler.ts";
 
+@injectable()
 export class MeshRankHandler implements Handler {
   public packetTypes: PacketType[] = Object.values(PacketType);
 
-  private readonly meshRank: MeshRankService;
-
-  constructor() {
-    this.meshRank = new MeshRankService({
-      logger: pino({ level: env.LOG_LEVEL }),
-      registrationKey: env.MESHRANK_REGISTRATION_KEY,
-      url: env.MESHRANK_MQTT_URL,
-      clientVersion: "r0ute",
-    });
-  }
+  constructor(@inject(MeshRankService) private readonly meshRank: MeshRankService) {}
 
   public async initialise(selfInfo: SelfInfo): Promise<void> {
     await this.meshRank.connect({

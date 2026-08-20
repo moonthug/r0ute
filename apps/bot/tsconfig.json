@@ -1,4 +1,10 @@
 {
   "extends": "@r0ute/tsconfig/base.json",
+  "compilerOptions": {
+    "experimentalDecorators": true,
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  },
   "include": ["src"]
 }

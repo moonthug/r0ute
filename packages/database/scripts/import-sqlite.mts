@@ -1,4 +1,5 @@
 import { DatabaseSync } from "node:sqlite";
+
 import { createPrismaClient, isValidCoordinate } from "../src/index.ts";
 
 type ImportRow = {

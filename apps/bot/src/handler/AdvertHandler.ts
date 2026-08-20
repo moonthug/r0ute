@@ -1,14 +1,22 @@
 import type { Packet } from "@liamcottle/meshcore.js";
+import { inject, injectable } from "tsyringe";
+
 import { push } from "@r0ute/database";
 
-import { PacketType } from "../types.js";
-import type { Handler, HandlerContext } from "./Handler.js";
+import { LocationService } from "@/service/LocationService.ts";
+import { PacketType } from "@/types.ts";
 
+import type { Handler, HandlerContext } from "./Handler.ts";
+
+@injectable()
 export class AdvertHandler implements Handler {
   public packetTypes: PacketType[] = [PacketType.Advert];
-  public async onMessage(packet: Packet, { locationService, logger }: HandlerContext) {
+
+  constructor(@inject(LocationService) private readonly locationService: LocationService) {}
+
+  public async onMessage(packet: Packet, { logger }: HandlerContext) {
     const advert = packet.parsePayloadTypeAdvert();
-    const recorded = await locationService.upsertLocationForAdvert(advert);
+    const recorded = await this.locationService.upsertLocationForAdvert(advert);
 
     if (recorded) {
       logger.debug({
@@ -24,6 +32,7 @@ export class AdvertHandler implements Handler {
           type: "advert",
           publicKey: recorded.publicKey,
           name: recorded.name,
+          nodeType: recorded.nodeType,
           lat: recorded.lat,
           lon: recorded.lon,
           advertTimestamp: recorded.advertTimestamp.toISOString(),

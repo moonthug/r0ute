@@ -1,5 +1,6 @@
 import "dotenv/config";
 
+import type { Coord } from "@turf/turf";
 import { z } from "zod";
 
 const LOG_LEVELS = ["trace", "debug", "info", "warn", "error", "fatal"] as const;
@@ -18,7 +19,13 @@ export const envSchema = z.object({
   DEVICE: z.string().min(1, "serial device path is required"),
   DATABASE_URL: z.url({ protocol: /^postgres(ql)?$/ }),
   LOG_LEVEL: z.enum(LOG_LEVELS).default("info"),
+  BOT_LOCATION: z.string().transform((value) => {
+    const [lon, lat] = value.split(",").map((item) => Number(item.trim()));
+    return [lon, lat] as Coord;
+  }),
   PING_RESPONDER_CHANNELS: commaList,
+  // public URL of the admin map, used in path responder replies
+  BASE_URL: z.url(),
   MONITOR_PUBLIC_KEY: z.string().min(64),
   MESHRANK_REGISTRATION_KEY: z
     .string()

@@ -10,17 +10,48 @@ datasource db {
   extensions = [postgis]
 }
 
+enum NodeType {
+  CHAT
+  REPEATER
+  ROOM
+  SENSOR
+}
+
 model Location {
-  publicKey       String   @id
+  publicKey       String                                @id
   name            String?
+  nodeType        NodeType?
   lat             Float
   lon             Float
-  /// PostGIS point derived from lat/lon by the database (generated column) so
-  /// spatial queries can use the GIST index; prisma cannot map this type
   point           Unsupported("geography(Point, 4326)") @default(dbgenerated())
   advertTimestamp DateTime
   receivedAt      DateTime
+  pathHops        PathHop[]
 
   @@index([name])
   @@index([point], type: Gist)
+}
+
+model PathRequest {
+  id               Int       @id @default(autoincrement())
+  channelId        Int
+  userName         String
+  requestTimestamp DateTime
+  receivedAt       DateTime  @default(now())
+  path             PathHop[]
+
+  @@unique([channelId, userName, requestTimestamp])
+  @@index([receivedAt])
+}
+
+model PathHop {
+  pathRequest       PathRequest @relation(fields: [pathRequestId], references: [id], onDelete: Cascade)
+  pathRequestId     Int
+  position          Int
+  hash              String
+  location          Location?   @relation(fields: [locationPublicKey], references: [publicKey])
+  locationPublicKey String?
+
+  @@id([pathRequestId, position])
+  @@index([locationPublicKey])
 }

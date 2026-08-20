@@ -1,14 +1,12 @@
 import type { NodeJSSerialConnection, Packet, SelfInfo } from "@liamcottle/meshcore.js";
 import type { Logger } from "pino";
 
-import type { LocationService } from "../service/LocationService.js";
-import type { Channel, PacketType } from "../types.js";
+import type { Channel, PacketType } from "@/types.ts";
 
 export type HandlerContext = {
   connection: NodeJSSerialConnection;
   channelMap: Map<number, Channel>;
   logger: Logger;
-  locationService: LocationService;
   nodeName: string | undefined;
   rx: { snr: number; rssi: number; raw: Uint8Array };
 };

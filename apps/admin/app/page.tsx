@@ -1,6 +1,7 @@
 import { isValidCoordinate } from "@r0ute/database";
 import { LocationMap } from "../components/LocationMap";
 import { db } from "../lib/db";
+import { LEGEND } from "../lib/node-types";
 
 export const dynamic = "force-dynamic";
 
@@ -16,6 +17,7 @@ export default async function HomePage() {
     .map((location) => ({
       publicKey: location.publicKey,
       name: location.name,
+      nodeType: location.nodeType,
       lat: location.lat,
       lon: location.lon,
       advertTimestamp: location.advertTimestamp.toISOString(),
@@ -29,6 +31,18 @@ export default async function HomePage() {
         <span className="text-sm text-neutral-400">
           {markers.length} node{markers.length === 1 ? "" : "s"} with a known location
         </span>
+        <ul className="m-0 ml-auto flex list-none gap-4 p-0 text-xs text-neutral-400">
+          {LEGEND.map((style) => (
+            <li key={style.label} className="flex items-center gap-1.5">
+              <span
+                aria-hidden
+                className="inline-block h-2.5 w-2.5 rounded-full"
+                style={{ backgroundColor: style.color, boxShadow: `0 0 4px ${style.color}` }}
+              />
+              {style.label}
+            </li>
+          ))}
+        </ul>
       </header>
       <div className="min-h-0 flex-1">
         <LocationMap locations={markers} />

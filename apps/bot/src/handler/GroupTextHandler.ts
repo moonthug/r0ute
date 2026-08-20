@@ -1,22 +1,25 @@
 import { createDecipheriv, createHmac } from "node:crypto";
+
 import type { Packet } from "@liamcottle/meshcore.js";
+import { inject, injectAll, injectable } from "tsyringe";
+
 import { push } from "@r0ute/database";
 
-import { type Channel, PacketType } from "../types.js";
-import type { Handler, HandlerContext } from "./Handler.js";
-import type { GroupResponderBase } from "./responder/Responder.js";
+import { LocationService } from "@/service/LocationService.ts";
+import { RESPONDER } from "@/tokens.ts";
+import { type Channel, PacketType } from "@/types.ts";
 
-type GroupTextHandlerOptions = {
-  responders: GroupResponderBase[];
-};
+import type { Handler, HandlerContext } from "./Handler.ts";
+import type { GroupResponderBase } from "./responder/Responder.ts";
 
+@injectable()
 export class GroupTextHandler implements Handler {
   public packetTypes: PacketType[] = [PacketType.GroupText];
-  private readonly responders: GroupResponderBase[];
 
-  constructor(options: GroupTextHandlerOptions) {
-    this.responders = options.responders;
-  }
+  constructor(
+    @inject(LocationService) private readonly locationService: LocationService,
+    @injectAll(RESPONDER) private readonly responders: GroupResponderBase[],
+  ) {}
 
   private decodeGroupText(payload: Uint8Array, channel: Channel) {
     const mac = payload.subarray(1, 3); // [0] is the channel hash byte
@@ -40,7 +43,7 @@ export class GroupTextHandler implements Handler {
   }
 
   public async onMessage(packet: Packet, context: HandlerContext) {
-    const { connection, channelMap, locationService, logger, nodeName } = context;
+    const { connection, channelMap, logger, nodeName } = context;
 
     const route = packet.getPathHashes().map((hash) => Buffer.from(hash).toString("hex"));
 
@@ -72,7 +75,7 @@ export class GroupTextHandler implements Handler {
       return;
     }
 
-    const location = await locationService.getLocationByName(user);
+    const location = await this.locationService.getLocationByName(user);
     const position = location ? { coord: [location.lon, location.lat] as [number, number] } : null;
 
     try {
@@ -88,7 +91,7 @@ export class GroupTextHandler implements Handler {
       logger.warn({ error }, "Failed to publish group-message push event");
     }
 
-    this.responders.forEach((responder) => {
+    for (const responder of this.responders) {
       const keywordMatch = responder.keywords?.some((keyword) => message.includes(keyword));
       const channelMatch = responder.channels.includes(channel.name);
 
@@ -105,8 +108,8 @@ export class GroupTextHandler implements Handler {
           },
         });
 
-        Promise.resolve(
-          responder.onMessage(message, {
+        try {
+          await responder.handleMessage(message, {
             connection,
             channel,
             user,
@@ -114,11 +117,11 @@ export class GroupTextHandler implements Handler {
             logger,
             location: position?.coord,
             timestamp: messageData.senderTimestamp,
-          }),
-        ).catch((error) => {
+          });
+        } catch (error) {
           logger.warn({ user, channel: channel.name, error }, "responder failed");
-        });
+        }
       }
-    });
+    }
   }
 }

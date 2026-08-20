@@ -1,9 +1,18 @@
-import { type Database, isValidCoordinate, type Location } from "@r0ute/database";
+import { inject, singleton } from "tsyringe";
 
-import type { AdvertPayload } from "../types.ts";
+import { type Database, isValidCoordinate, type Location, NodeType } from "@r0ute/database";
 
+import { DATABASE } from "@/tokens.ts";
+import type { AdvertPayload } from "@/types.ts";
+
+/** meshcore.js reports the advert's ADV_TYPE flag as a string; "NONE" means unset */
+function parseNodeType(type: string | null): NodeType | null {
+  return type !== null && type in NodeType ? NodeType[type as keyof typeof NodeType] : null;
+}
+
+@singleton()
 export class LocationService {
-  constructor(private db: Database) {}
+  constructor(@inject(DATABASE) private readonly db: Database) {}
 
   async getLocationByPublicKey(publicKey: string) {
     return await this.db.location.findUnique({ where: { publicKey } });
@@ -18,7 +27,7 @@ export class LocationService {
   }
 
   async upsertLocationForAdvert(advert: AdvertPayload): Promise<Location | null> {
-    const { lat, lon, name } = advert.app_data;
+    const { lat, lon, name, type } = advert.app_data;
 
     if (lat === null || lon === null || (lat === 0 && lon === 0)) {
       return null;
@@ -38,6 +47,7 @@ export class LocationService {
 
     const data = {
       name,
+      nodeType: parseNodeType(type),
       lat: lat / 1_000_000, // stored on-air as millionths of a degree
       lon: lon / 1_000_000,
       advertTimestamp,

@@ -1,15 +1,11 @@
 import type { NodeJSSerialConnection } from "@liamcottle/meshcore.js";
 import type { Logger } from "pino";
+import { inject, singleton } from "tsyringe";
+
+import type { Env } from "@/env.ts";
+import { CONNECTION, ENV, LOGGER } from "@/tokens.ts";
 
 const DEFAULT_INTERVAL_MS = 60 * 60 * 1000;
-
-type HeartbeatOptions = {
-  connection: NodeJSSerialConnection;
-  logger: Logger;
-  /** hex-encoded public key of the node that receives the uptime message */
-  monitorPublicKey: string;
-  intervalMs?: number;
-};
 
 function formatUptime(sinceMs: number): string {
   const totalMinutes = Math.floor(sinceMs / 60_000);
@@ -19,24 +15,24 @@ function formatUptime(sinceMs: number): string {
   return days > 0 ? `${days}d ${hours}h ${minutes}m` : `${hours}h ${minutes}m`;
 }
 
-/** Periodically DMs a monitor node with the bot's uptime, as a liveness signal. */
-export class Heartbeat {
-  private readonly connection: NodeJSSerialConnection;
+@singleton()
+export class HeartbeatService {
   private readonly logger: Logger;
   private readonly monitorPublicKey: Buffer;
-  private readonly intervalMs: number;
+  private readonly intervalMs = DEFAULT_INTERVAL_MS;
 
   private startedAt: Date | null = null;
   private timer: ReturnType<typeof setInterval> | null = null;
 
-  constructor(options: HeartbeatOptions) {
-    this.connection = options.connection;
-    this.logger = options.logger.child({ component: "Heartbeat" });
-    this.monitorPublicKey = Buffer.from(options.monitorPublicKey, "hex");
-    this.intervalMs = options.intervalMs ?? DEFAULT_INTERVAL_MS;
+  constructor(
+    @inject(CONNECTION) private readonly connection: NodeJSSerialConnection,
+    @inject(ENV) env: Env,
+    @inject(LOGGER) logger: Logger,
+  ) {
+    this.logger = logger.child({ component: "Heartbeat" });
+    this.monitorPublicKey = Buffer.from(env.MONITOR_PUBLIC_KEY, "hex");
   }
 
-  /** (Re)starts the uptime clock and the send interval. */
   start(): void {
     this.stop();
     this.startedAt = new Date();

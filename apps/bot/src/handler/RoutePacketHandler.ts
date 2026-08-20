@@ -1,9 +1,13 @@
 import type { Packet } from "@liamcottle/meshcore.js";
+import { injectable } from "tsyringe";
+
 import { push } from "@r0ute/database";
 
-import { PacketType } from "../types.js";
-import type { Handler, HandlerContext } from "./Handler.js";
+import { PacketType } from "@/types.ts";
 
+import type { Handler, HandlerContext } from "./Handler.ts";
+
+@injectable()
 export class RoutePacketHandler implements Handler {
   public packetTypes: PacketType[] = [
     PacketType.GroupData,
