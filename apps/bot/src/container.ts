@@ -43,7 +43,7 @@ container.register(RESPONDER, {
   useFactory: () =>
     new PingResponder({
       channels: env.PING_RESPONDER_CHANNELS,
-      keywords: ["test"],
+      keywords: env.PING_RESPONDER_COMMANDS,
       location: env.BOT_LOCATION,
     }),
 });
@@ -51,8 +51,8 @@ container.register(RESPONDER, {
   useFactory: () =>
     new PathResponder(
       {
-        channels: env.PING_RESPONDER_CHANNELS,
-        keywords: ["path", "test"],
+        channels: env.PATH_RESPONDER_CHANNELS,
+        keywords: env.PATH_RESPONDER_COMMANDS,
         baseUrl: env.BASE_URL,
       },
       container.resolve(PathRequestService),

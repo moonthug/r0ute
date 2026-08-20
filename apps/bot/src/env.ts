@@ -24,7 +24,9 @@ export const envSchema = z.object({
     return [lon, lat] as Coord;
   }),
   PING_RESPONDER_CHANNELS: commaList,
-  // public URL of the admin map, used in path responder replies
+  PING_RESPONDER_COMMANDS: commaList,
+  PATH_RESPONDER_CHANNELS: commaList,
+  PATH_RESPONDER_COMMANDS: commaList,
   BASE_URL: z.url(),
   MONITOR_PUBLIC_KEY: z.string().min(64),
   MESHRANK_REGISTRATION_KEY: z
