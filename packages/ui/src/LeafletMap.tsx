@@ -105,12 +105,12 @@ function lighten(hex: string, factor = 0.3): string {
   });
   return `#${channels.map((channel) => channel.toString(16).padStart(2, "0")).join("")}`;
 }
-// both distinct from the cyan marker fill: orange = decoded messages,
-// violet = opaque routed packets
+
 const PATH_COLORS: Record<PathVariant, string> = {
   message: "#f97316",
   packet: "#a78bfa",
 };
+
 const ARROW_PX = { main: 16, alt: 12 } as const;
 
 type ArrowWeight = keyof typeof ARROW_PX;
