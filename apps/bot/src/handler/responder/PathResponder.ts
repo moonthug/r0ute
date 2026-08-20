@@ -22,12 +22,12 @@ export class PathResponder extends GroupResponderBase {
   }
 
   async onMessage(_message: string, context: GroupMessageContext) {
-    const { connection, channel, logger, route, timestamp, user } = context;
+    const { channel, logger, route, timestamp, user } = context;
 
-    if (route.length === 0) {
-      await connection.sendChannelTextMessage(channel.id, `@[${user}] Direct path`);
-      return;
-    }
+    // if (route.length === 0) {
+    //   await connection.sendChannelTextMessage(channel.id, `@[${user}] Direct path`);
+    //   return;
+    // }
 
     const pathRequest = await this.pathRequestService.createPath({
       channelId: channel.id,
@@ -36,7 +36,7 @@ export class PathResponder extends GroupResponderBase {
       path: route,
     });
 
-    const message = `@[${user}] Path: ${this.baseUrl}/${pathRequest.id}`;
+    const message = `@[${user}] ${this.baseUrl}/${pathRequest.id}`;
 
     //await connection.sendChannelTextMessage(channel.id, message);
 
