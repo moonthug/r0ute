@@ -24,6 +24,11 @@ export class PathResponder extends GroupResponderBase {
   async onMessage(_message: string, context: GroupMessageContext) {
     const { channel, logger, route, timestamp, user } = context;
 
+    // Skip direct routes
+    if (!route?.length) {
+      return;
+    }
+
     // Skip single byte routes
     if (route && route[0]?.length === 2) {
       return;
