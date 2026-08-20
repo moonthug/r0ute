@@ -34,14 +34,19 @@ model Location {
 
 model PathRequest {
   id               String    @id @default(dbgenerated("gen_random_uuid()"))
+  /** short token used in shared links instead of the uuid */
+  slug             String    @unique
   channelId        Int
   userName         String
   requestTimestamp DateTime
   receivedAt       DateTime  @default(now())
+  /** requests are purged once expired (28-day TTL) */
+  expiresAt        DateTime
   path             PathHop[]
 
   @@unique([channelId, userName, requestTimestamp])
   @@index([receivedAt])
+  @@index([expiresAt])
 }
 
 model PathHop {

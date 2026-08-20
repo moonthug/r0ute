@@ -1,8 +1,17 @@
 import { inject, injectable } from "tsyringe";
 
-import type { Database, Location, PathHop, PathRequest } from "@r0ute/database";
+import {
+  type Database,
+  generatePathSlug,
+  type Location,
+  type PathHop,
+  type PathRequest,
+} from "@r0ute/database";
 
 import { DATABASE } from "@/tokens.ts";
+
+const PATH_TTL_MS = 28 * 24 * 60 * 60 * 1000;
+const SLUG_ATTEMPTS = 3;
 
 export type CreatePathData = {
   channelId: number;
@@ -48,24 +57,41 @@ export class PathRequestService {
       })),
     ].map((hop, position) => ({ ...hop, position }));
 
-    return await this.db.pathRequest.upsert({
-      where: {
-        channelId_userName_requestTimestamp: {
-          channelId: data.channelId,
-          userName: data.userName,
-          requestTimestamp,
-        },
-      },
-      create: {
-        channelId: data.channelId,
-        userName: data.userName,
-        requestTimestamp,
-        path: { create: hops },
-      },
-      update: {},
-      include: {
-        path: { orderBy: { position: "asc" }, include: { location: true } },
-      },
-    });
+    // expired requests are purged lazily whenever a new one arrives; hops
+    // follow via the cascade on PathHop
+    await this.db.pathRequest.deleteMany({ where: { expiresAt: { lt: new Date() } } });
+
+    // the slug space is small enough that a collision is possible, so retry
+    // with a fresh token; the unique constraint is the arbiter
+    for (let attempt = 1; ; attempt++) {
+      try {
+        return await this.db.pathRequest.upsert({
+          where: {
+            channelId_userName_requestTimestamp: {
+              channelId: data.channelId,
+              userName: data.userName,
+              requestTimestamp,
+            },
+          },
+          create: {
+            slug: generatePathSlug(),
+            channelId: data.channelId,
+            userName: data.userName,
+            requestTimestamp,
+            expiresAt: new Date(Date.now() + PATH_TTL_MS),
+            path: { create: hops },
+          },
+          update: {},
+          include: {
+            path: { orderBy: { position: "asc" }, include: { location: true } },
+          },
+        });
+      } catch (error) {
+        const isSlugCollision = error instanceof Error && "code" in error && error.code === "P2002";
+        if (!isSlugCollision || attempt >= SLUG_ATTEMPTS) {
+          throw error;
+        }
+      }
+    }
   }
 }

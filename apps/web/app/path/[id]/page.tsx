@@ -3,7 +3,7 @@ import { type Hop, resolveRoute } from "@r0ute/ui/resolve-route";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { isValidCoordinate } from "@r0ute/database";
+import { isPathSlug, isValidCoordinate } from "@r0ute/database";
 
 import { RouteTable } from "../../../components/RouteTable.tsx";
 import { RouteView } from "../../../components/RouteView.tsx";
@@ -18,15 +18,22 @@ export async function generateMetadata({ params }: PathPageProps) {
   return { title: `r0ute — path #${id}` };
 }
 
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export default async function PathRequestPage({ params }: PathPageProps) {
   const { id } = await params;
-  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) notFound();
+
+  // links now carry the short slug, but uuids already shared keep working
+  const isUuid = UUID_PATTERN.test(id);
+  if (!isUuid && !isPathSlug(id)) notFound();
 
   const pathRequest = await db.pathRequest.findUnique({
-    where: { id },
+    where: isUuid ? { id } : { slug: id.toLowerCase() },
     include: { path: { orderBy: { position: "asc" }, include: { location: true } } },
   });
-  if (!pathRequest) notFound();
+  // expired requests may linger until the next lazy purge, so the expiry is
+  // enforced here too
+  if (!pathRequest || pathRequest.expiresAt <= new Date()) notFound();
 
   // the sender's own node is stored alongside the packet hops but anchors the
   // chain rather than counting as a hop
@@ -94,7 +101,7 @@ export default async function PathRequestPage({ params }: PathPageProps) {
   const paths: MapPath[] = [
     {
       id: pathRequest.id,
-      label: `${pathRequest.userName} — path #${pathRequest.id}`,
+      label: `${pathRequest.userName} — path #${pathRequest.slug}`,
       variant: "message",
       hops: route.hops,
       segments: route.segments,
@@ -111,7 +118,7 @@ export default async function PathRequestPage({ params }: PathPageProps) {
           r0ute
         </Link>
         <span className="text-sm text-neutral-400">
-          path #{pathRequest.id} · {pathRequest.userName} ·{" "}
+          path #{pathRequest.slug} · {pathRequest.userName} ·{" "}
           {hops.length === 0 ? "direct" : `${hops.length} hop${hops.length === 1 ? "" : "s"}`}
           {unknown > 0 ? ` (${unknown} unknown)` : ""}
         </span>
