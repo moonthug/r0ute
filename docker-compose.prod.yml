@@ -3,7 +3,7 @@
 #   docker compose -f docker-compose.prod.yml up -d
 #
 # replace <owner> with the github owner of this repo (images are pushed to
-# ghcr.io/<owner>/r0ute/{bot,admin} by .github/workflows/ci.yml)
+# ghcr.io/<owner>/r0ute/{bot,admin,web} by .github/workflows/ci.yml)
 services:
   bot:
     image: ghcr.io/<owner>/r0ute/bot:latest
@@ -20,6 +20,8 @@ services:
       DEVICE: /dev/ttyUSB0
       DATABASE_URL: postgresql://r0ute:${POSTGRES_PASSWORD:-r0ute}@postgres:5432/r0ute
       LOG_LEVEL: info
+      # public URL of the web service below — shared in path reply messages
+      BASE_URL: ${BASE_URL:-http://localhost:3100/path}
       # optional MeshRank observer uplink (https://meshrank.net) — set the IATA
       # code of your region to enable; defaults to the public broker
       # MESHRANK_IATA: MAN
@@ -36,6 +38,20 @@ services:
         condition: service_started
     ports:
       - "3000:3000"
+    environment:
+      DATABASE_URL: postgresql://r0ute:${POSTGRES_PASSWORD:-r0ute}@postgres:5432/r0ute
+
+  web:
+    image: ghcr.io/<owner>/r0ute/web:latest
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      # the bot applies database migrations on startup
+      bot:
+        condition: service_started
+    ports:
+      - "3100:3000"
     environment:
       DATABASE_URL: postgresql://r0ute:${POSTGRES_PASSWORD:-r0ute}@postgres:5432/r0ute
 
