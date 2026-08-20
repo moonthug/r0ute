@@ -96,7 +96,6 @@ function DevMapHandle() {
 
 const FALLBACK_CENTER: [number, number] = [53.1442947, -1.5428249]; // Matlock
 
-/** marker ring: the fill lightened toward white, so overlapping markers stay separable without a hard outline */
 function lighten(hex: string, factor = 0.3): string {
   const value = hex.replace("#", "");
   const channels = [0, 2, 4].map((offset) => {
@@ -244,7 +243,6 @@ export default function LeafletMap({
               key={`${path.id}:${segment.id}:${arrow.id}`}
               position={arrow.position}
               icon={arrowIcon(arrow.angleDeg, "main", path.variant)}
-              // purely decorative: never steal a click from the node underneath
               interactive={false}
               keyboard={false}
             />
@@ -252,8 +250,6 @@ export default function LeafletMap({
         ),
       )}
       {locations.map((location) => {
-        // a remount would tear down an open popup, so a marker being read holds
-        // its key steady and skips the pulse until the user closes it
         const frozen = openPopup?.publicKey === location.publicKey ? openPopup.seq : null;
         const pulse = frozen ?? pulses[location.publicKey];
         const style = nodeStyle(location.nodeType);
@@ -312,9 +308,9 @@ export default function LeafletMap({
           center={[anchor.lat, anchor.lon]}
           radius={6}
           pathOptions={{
-            color: lighten("#22d3ee"),
+            color: lighten("#4ade80"),
             weight: 2,
-            fillColor: "#22d3ee",
+            fillColor: "#4ade80",
             fillOpacity: 0.9,
             className: "node-marker",
           }}
@@ -322,7 +318,7 @@ export default function LeafletMap({
           <Popup>
             <strong>{anchor.name}</strong>
             <br />
-            Sender (matched by name — position is a guess)
+            Sender
           </Popup>
         </CircleMarker>
       )}

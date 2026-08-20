@@ -49,6 +49,8 @@ model PathHop {
   pathRequestId     String
   position          Int
   hash              String
+  /** the sender's own node, resolved from the request's userName — drawn as the map anchor */
+  isSender          Boolean     @default(false)
   location          Location?   @relation(fields: [locationPublicKey], references: [publicKey])
   locationPublicKey String?
 

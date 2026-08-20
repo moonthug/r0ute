@@ -24,13 +24,8 @@ export class PathResponder extends GroupResponderBase {
   async onMessage(_message: string, context: GroupMessageContext) {
     const { channel, logger, route, timestamp, user } = context;
 
-    // direct and single-hop paths have nothing worth drawing, and longer ones
-    // are protocol noise — only 2–3 hop routes get a page
-    if (route.length < 2 || route.length > 3) {
-      logger.debug({
-        responder: "PATH",
-        data: { message: `skipped ${route.length}-hop path from ${user}` },
-      });
+    // Skip single byte routes
+    if (route && route[0]?.length === 2) {
       return;
     }
 

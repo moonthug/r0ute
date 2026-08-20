@@ -24,11 +24,14 @@ export default async function PathRequestPage({ params }: PathPageProps) {
 
   const pathRequest = await db.pathRequest.findUnique({
     where: { id },
-    include: { path: { orderBy: { position: "asc" } } },
+    include: { path: { orderBy: { position: "asc" }, include: { location: true } } },
   });
   if (!pathRequest) notFound();
 
-  const prefixes = pathRequest.path.map((hop) => hop.hash);
+  // the sender's own node is stored alongside the packet hops but anchors the
+  // chain rather than counting as a hop
+  const senderHop = pathRequest.path.find((hop) => hop.isSender);
+  const prefixes = pathRequest.path.filter((hop) => !hop.isSender).map((hop) => hop.hash);
 
   // hops are truncated key prefixes, so candidates are looked up live rather
   // than trusting the single resolution stored at write time — nodes heard
@@ -39,7 +42,11 @@ export default async function PathRequestPage({ params }: PathPageProps) {
           where: { OR: prefixes.map((prefix) => ({ publicKey: { startsWith: prefix } })) },
         })
       : Promise.resolve([]),
-    db.location.findMany({ where: { name: pathRequest.userName } }),
+    // older requests predate the stored sender hop, so fall back to a live
+    // name lookup for them
+    senderHop
+      ? Promise.resolve([])
+      : db.location.findMany({ where: { name: pathRequest.userName } }),
   ]);
 
   const validRows = candidateRows.filter((row) => isValidCoordinate(row.lat, row.lon));
@@ -54,9 +61,20 @@ export default async function PathRequestPage({ params }: PathPageProps) {
   // display names are neither unique nor verified, so only an unambiguous
   // match is trusted enough to anchor the chain from the sender
   const senderMatches = senderRows.filter((row) => isValidCoordinate(row.lat, row.lon));
-  const sender = senderMatches.length === 1 ? senderMatches[0] : undefined;
+  const storedSender =
+    senderHop?.location && isValidCoordinate(senderHop.location.lat, senderHop.location.lon)
+      ? senderHop.location
+      : undefined;
+  const sender = storedSender ?? (senderMatches.length === 1 ? senderMatches[0] : undefined);
   const anchor: MapAnchor | null = sender
     ? { lat: sender.lat, lon: sender.lon, name: pathRequest.userName }
+    : null;
+
+  // the table lists hops by truncated key, so the sender's full key is cut to
+  // the same width (2–3 bytes) to read as one column
+  const senderPrefixLength = Math.min(6, Math.max(4, prefixes[0]?.length ?? 4));
+  const tableSender = sender
+    ? { prefix: sender.publicKey.slice(0, senderPrefixLength), name: pathRequest.userName }
     : null;
 
   const route = resolveRoute(hops, anchor);
@@ -103,7 +121,7 @@ export default async function PathRequestPage({ params }: PathPageProps) {
       </header>
       <div className="relative min-h-0 flex-1">
         <RouteView locations={locations} paths={paths} anchor={anchor} />
-        <RouteTable hops={route.hops} />
+        <RouteTable hops={route.hops} sender={tableSender} />
       </div>
     </main>
   );

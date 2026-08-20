@@ -5,10 +5,17 @@ import type { ResolvedHop } from "@r0ute/ui/resolve-route";
  * pass through and the text cannot be selected, so it reads as part of the map
  * rather than a control.
  */
-export function RouteTable({ hops }: { hops: ResolvedHop[] }) {
+export function RouteTable({
+  hops,
+  sender,
+}: {
+  hops: ResolvedHop[];
+  /** the request's origin node, keyed to the same width as the hop hashes */
+  sender: { prefix: string; name: string } | null;
+}) {
   return (
     <div className="pointer-events-none absolute top-3 left-3 z-[1000] rounded-md border border-neutral-800 bg-neutral-950/85 font-mono text-xs backdrop-blur-sm select-none">
-      {hops.length === 0 ? (
+      {hops.length === 0 && !sender ? (
         <p className="m-0 px-3 py-2 text-neutral-400">Direct — no repeaters</p>
       ) : (
         <table className="border-collapse">
@@ -20,6 +27,14 @@ export function RouteTable({ hops }: { hops: ResolvedHop[] }) {
             </tr>
           </thead>
           <tbody>
+            {sender && (
+              // green matches the sender's map marker
+              <tr className="border-t border-neutral-800/60">
+                <td className="px-3 py-1.5 text-neutral-500">S</td>
+                <td className="px-3 py-1.5 text-green-400">{sender.prefix}</td>
+                <td className="px-3 py-1.5 text-neutral-200">{sender.name}</td>
+              </tr>
+            )}
             {hops.map((hop, index) => (
               // biome-ignore lint/suspicious/noArrayIndexKey: a hop's position is its identity — prefixes can repeat within a route
               <tr key={`${index}:${hop.prefix}`} className="border-t border-neutral-800/60">

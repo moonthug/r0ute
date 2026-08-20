@@ -23,18 +23,30 @@ export class PathRequestService {
     const requestTimestamp = new Date(data.requestTimestamp * 1000);
     const hashes = data.path;
 
-    const locations = hashes.length
-      ? await this.db.location.findMany({
-          where: { OR: hashes.map((hash) => ({ publicKey: { startsWith: hash } })) },
-        })
-      : [];
+    const [locations, senderMatches] = await Promise.all([
+      hashes.length
+        ? this.db.location.findMany({
+            where: { OR: hashes.map((hash) => ({ publicKey: { startsWith: hash } })) },
+          })
+        : Promise.resolve([]),
+      this.db.location.findMany({ where: { name: data.userName } }),
+    ]);
 
-    const hops = hashes.map((hash, position) => ({
-      position,
-      hash,
-      locationPublicKey:
-        locations.find((location) => location.publicKey.startsWith(hash))?.publicKey ?? null,
-    }));
+    // display names are neither unique nor verified, so only an unambiguous
+    // match is trusted enough to record the sender as the path's origin
+    const sender = senderMatches.length === 1 ? senderMatches[0] : undefined;
+
+    const hops = [
+      ...(sender
+        ? [{ hash: sender.publicKey, locationPublicKey: sender.publicKey, isSender: true }]
+        : []),
+      ...hashes.map((hash) => ({
+        hash,
+        locationPublicKey:
+          locations.find((location) => location.publicKey.startsWith(hash))?.publicKey ?? null,
+        isSender: false,
+      })),
+    ].map((hop, position) => ({ ...hop, position }));
 
     return await this.db.pathRequest.upsert({
       where: {
