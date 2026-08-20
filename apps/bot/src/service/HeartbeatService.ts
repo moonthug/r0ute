@@ -36,6 +36,9 @@ export class HeartbeatService {
   start(): void {
     this.stop();
     this.startedAt = new Date();
+
+    this.sendMessageToMonitor("Bot started");
+
     this.timer = setInterval(() => {
       void this.beat();
     }, this.intervalMs);
@@ -48,6 +51,21 @@ export class HeartbeatService {
     }
   }
 
+  private async sendMessageToMonitor(message: string): Promise<void> {
+    try {
+      const contact = await this.connection.findContactByPublicKeyPrefix(this.monitorPublicKey);
+
+      if (contact) {
+        await this.connection.sendTextMessage(this.monitorPublicKey, message);
+        this.logger.debug({ message }, "Message sent");
+      } else {
+        this.logger.warn("Contact not found");
+      }
+    } catch (error) {
+      this.logger.warn({ error }, "Message send failed");
+    }
+  }
+
   private async beat(): Promise<void> {
     const startedAt = this.startedAt;
     if (!startedAt) {
@@ -55,17 +73,6 @@ export class HeartbeatService {
     }
 
     const uptime = formatUptime(Date.now() - startedAt.getTime());
-    try {
-      const contact = await this.connection.findContactByPublicKeyPrefix(this.monitorPublicKey);
-
-      if (contact) {
-        await this.connection.sendTextMessage(this.monitorPublicKey, `Up time: ${uptime}`);
-        this.logger.debug({ uptime }, "Heartbeat sent");
-      } else {
-        this.logger.warn("Contact not found");
-      }
-    } catch (error) {
-      this.logger.warn({ error }, "Heartbeat send failed");
-    }
+    await this.sendMessageToMonitor(`Up time: ${uptime}`);
   }
 }
