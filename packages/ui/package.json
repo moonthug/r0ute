@@ -1,0 +1,42 @@
+{
+  "name": "@r0ute/ui",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./map": {
+      "types": "./src/LeafletMap.tsx",
+      "default": "./src/LeafletMap.tsx"
+    },
+    "./node-types": {
+      "types": "./src/node-types.ts",
+      "default": "./src/node-types.ts"
+    },
+    "./resolve-route": {
+      "types": "./src/resolve-route.ts",
+      "default": "./src/resolve-route.ts"
+    }
+  },
+  "scripts": {
+    "lint": "biome check .",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@r0ute/database": "workspace:*",
+    "leaflet": "^1.9.4",
+    "react-leaflet": "^5.0.0"
+  },
+  "peerDependencies": {
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.5.8",
+    "@r0ute/biome-config": "workspace:*",
+    "@r0ute/tsconfig": "workspace:*",
+    "@types/leaflet": "^1.9.22",
+    "@types/react": "^19.2.18",
+    "react": "^19.2.8",
+    "typescript": "^7.0.2"
+  }
+}

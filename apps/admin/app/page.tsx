@@ -1,8 +1,9 @@
+import { LEGEND } from "@r0ute/ui/node-types";
+
 import { isValidCoordinate } from "@r0ute/database";
 
 import { LocationMap } from "../components/LocationMap";
 import { db } from "../lib/db";
-import { LEGEND } from "../lib/node-types";
 
 export const dynamic = "force-dynamic";
 

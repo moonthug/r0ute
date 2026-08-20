@@ -20,9 +20,9 @@ importers:
       '@r0ute/database':
         specifier: workspace:*
         version: link:../../packages/database
-      leaflet:
-        specifier: ^1.9.4
-        version: 1.9.4
+      '@r0ute/ui':
+        specifier: workspace:*
+        version: link:../../packages/ui
       next:
         specifier: ^16.3.0
         version: 16.3.0(@types/node@26.2.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
@@ -35,9 +35,6 @@ importers:
       react-dom:
         specifier: ^19.2.8
         version: 19.2.8(react@19.2.8)
-      react-leaflet:
-        specifier: ^5.0.0
-        version: 5.0.0(leaflet@1.9.4)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
     devDependencies:
       '@biomejs/biome':
         specifier: ^2.5.8
@@ -51,9 +48,6 @@ importers:
       '@tailwindcss/postcss':
         specifier: ^4.3.3
         version: 4.3.3
-      '@types/leaflet':
-        specifier: ^1.9.22
-        version: 1.9.22
       '@types/node':
         specifier: ^26.2.0
         version: 26.2.0
@@ -133,9 +127,9 @@ importers:
       '@r0ute/database':
         specifier: workspace:*
         version: link:../../packages/database
-      leaflet:
-        specifier: ^1.9.4
-        version: 1.9.4
+      '@r0ute/ui':
+        specifier: workspace:*
+        version: link:../../packages/ui
       next:
         specifier: ^16.3.0
         version: 16.3.0(@types/node@26.2.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
@@ -148,9 +142,6 @@ importers:
       react-dom:
         specifier: ^19.2.8
         version: 19.2.8(react@19.2.8)
-      react-leaflet:
-        specifier: ^5.0.0
-        version: 5.0.0(leaflet@1.9.4)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
     devDependencies:
       '@biomejs/biome':
         specifier: ^2.5.8
@@ -164,9 +155,6 @@ importers:
       '@tailwindcss/postcss':
         specifier: ^4.3.3
         version: 4.3.3
-      '@types/leaflet':
-        specifier: ^1.9.22
-        version: 1.9.22
       '@types/node':
         specifier: ^26.2.0
         version: 26.2.0
@@ -223,6 +211,43 @@ importers:
         version: 7.0.2
 
   packages/tsconfig: {}
+
+  packages/ui:
+    dependencies:
+      '@r0ute/database':
+        specifier: workspace:*
+        version: link:../database
+      leaflet:
+        specifier: ^1.9.4
+        version: 1.9.4
+      react-dom:
+        specifier: ^19.2.8
+        version: 19.2.8(react@19.2.8)
+      react-leaflet:
+        specifier: ^5.0.0
+        version: 5.0.0(leaflet@1.9.4)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+    devDependencies:
+      '@biomejs/biome':
+        specifier: ^2.5.8
+        version: 2.5.8
+      '@r0ute/biome-config':
+        specifier: workspace:*
+        version: link:../biome-config
+      '@r0ute/tsconfig':
+        specifier: workspace:*
+        version: link:../tsconfig
+      '@types/leaflet':
+        specifier: ^1.9.22
+        version: 1.9.22
+      '@types/react':
+        specifier: ^19.2.18
+        version: 19.2.18
+      react:
+        specifier: ^19.2.8
+        version: 19.2.8
+      typescript:
+        specifier: ^7.0.2
+        version: 7.0.2
 
 packages:
 

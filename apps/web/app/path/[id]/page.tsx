@@ -1,12 +1,13 @@
+import type { MapAnchor, MapLocation, MapPath } from "@r0ute/ui/map";
+import { type Hop, resolveRoute } from "@r0ute/ui/resolve-route";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { isValidCoordinate } from "@r0ute/database";
 
-import type { RouteMarker } from "../../../components/RouteMap.tsx";
+import { RouteTable } from "../../../components/RouteTable.tsx";
 import { RouteView } from "../../../components/RouteView.tsx";
 import { db } from "../../../lib/db.ts";
-import { type Anchor, describeHop, type Hop, resolveRoute } from "../../../lib/resolve-route.ts";
 
 export const dynamic = "force-dynamic";
 
@@ -54,12 +55,14 @@ export default async function PathRequestPage({ params }: PathPageProps) {
   // match is trusted enough to anchor the chain from the sender
   const senderMatches = senderRows.filter((row) => isValidCoordinate(row.lat, row.lon));
   const sender = senderMatches.length === 1 ? senderMatches[0] : undefined;
-  const anchor: Anchor | null = sender ? { lat: sender.lat, lon: sender.lon } : null;
+  const anchor: MapAnchor | null = sender
+    ? { lat: sender.lat, lon: sender.lon, name: pathRequest.userName }
+    : null;
 
   const route = resolveRoute(hops, anchor);
 
   // client components need serializable props — Dates become ISO strings
-  const markers: RouteMarker[] = [
+  const locations: MapLocation[] = [
     ...new Map(validRows.map((row) => [row.publicKey, row])).values(),
   ].map((row) => ({
     publicKey: row.publicKey,
@@ -70,7 +73,18 @@ export default async function PathRequestPage({ params }: PathPageProps) {
     advertTimestamp: row.advertTimestamp.toISOString(),
   }));
 
-  const unknown = hops.filter((hop) => hop.candidates.length === 0).length;
+  const paths: MapPath[] = [
+    {
+      id: pathRequest.id,
+      label: `${pathRequest.userName} — path #${pathRequest.id}`,
+      variant: "message",
+      hops: route.hops,
+      segments: route.segments,
+      alternatives: route.alternatives,
+    },
+  ];
+
+  const unknown = route.hops.filter((hop) => !hop.chosen).length;
 
   return (
     <main className="flex h-screen flex-col">
@@ -87,19 +101,9 @@ export default async function PathRequestPage({ params }: PathPageProps) {
           {pathRequest.requestTimestamp.toUTCString()}
         </span>
       </header>
-      <div className="border-b border-neutral-800 bg-neutral-950 px-4 py-1.5 font-mono text-xs text-neutral-400">
-        {hops.length === 0
-          ? "This message reached the bot directly — no repeaters to draw."
-          : route.hops.map(describeHop).join(" → ")}
-      </div>
-      <div className="min-h-0 flex-1">
-        <RouteView
-          label={`${pathRequest.userName} — path #${pathRequest.id}`}
-          senderName={pathRequest.userName}
-          anchor={anchor}
-          markers={markers}
-          route={route}
-        />
+      <div className="relative min-h-0 flex-1">
+        <RouteView locations={locations} paths={paths} anchor={anchor} />
+        <RouteTable hops={route.hops} />
       </div>
     </main>
   );

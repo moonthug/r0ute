@@ -1,17 +1,17 @@
 "use client";
 
+import type { MapLocation, MapPath, PathVariant } from "@r0ute/ui/map";
+import { NODE_STYLES, nodeStyle } from "@r0ute/ui/node-types";
+import { type Anchor, type Candidate, type Hop, resolveRoute } from "@r0ute/ui/resolve-route";
 import nextDynamic from "next/dynamic";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import type { AdvertPush, NodeType } from "@r0ute/database";
 
-import { NODE_STYLES, nodeStyle } from "../lib/node-types";
-import { type Anchor, type Candidate, type Hop, resolveRoute } from "../lib/resolve-route";
-import type { MapLocation, MapPath, PathVariant } from "./LeafletMap";
 import { PacketFeed, type PacketRow } from "./PacketFeed";
 
 // leaflet touches `window` at import time, so the map must never render on the server
-const LeafletMap = nextDynamic(() => import("./LeafletMap"), {
+const LeafletMap = nextDynamic(() => import("@r0ute/ui/map"), {
   ssr: false,
   loading: () => <p className="p-4 text-neutral-400">Loading map…</p>,
 });

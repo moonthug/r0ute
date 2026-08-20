@@ -1,12 +1,12 @@
 /**
- * Assertions for lib/resolve-route.ts. The repo has no test framework, so this
+ * Assertions for @r0ute/ui's resolve-route. The repo has no test framework, so this
  * is a plain script: `pnpm --filter @r0ute/admin check`.
  */
 import assert from "node:assert/strict";
 
-import type { GroupMessagePush } from "@r0ute/database";
+import { type Candidate, type Hop, resolveRoute, segmentArrows } from "@r0ute/ui/resolve-route";
 
-import { type Candidate, type Hop, resolveRoute, segmentArrows } from "../lib/resolve-route.ts";
+import type { GroupMessagePush } from "@r0ute/database";
 
 function node(publicKey: string, lat: number, lon: number): Candidate {
   return { publicKey, name: publicKey.toUpperCase(), lat, lon };
