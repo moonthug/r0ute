@@ -96,12 +96,13 @@ function DevMapHandle() {
 
 const FALLBACK_CENTER: [number, number] = [53.1442947, -1.5428249]; // Matlock
 
-/** marker ring: the fill darkened, so overlapping markers stay separable without a hard outline */
-function darken(hex: string, factor = 0.4): string {
+/** marker ring: the fill lightened toward white, so overlapping markers stay separable without a hard outline */
+function lighten(hex: string, factor = 0.3): string {
   const value = hex.replace("#", "");
-  const channels = [0, 2, 4].map((offset) =>
-    Math.round(Number.parseInt(value.slice(offset, offset + 2), 16) * factor),
-  );
+  const channels = [0, 2, 4].map((offset) => {
+    const channel = Number.parseInt(value.slice(offset, offset + 2), 16);
+    return Math.round(channel + (255 - channel) * factor);
+  });
   return `#${channels.map((channel) => channel.toString(16).padStart(2, "0")).join("")}`;
 }
 // both distinct from the cyan marker fill: orange = decoded messages,
@@ -275,7 +276,7 @@ export default function LeafletMap({
                 ),
             }}
             pathOptions={{
-              color: darken(style.color),
+              color: lighten(style.color),
               weight: 2,
               fillColor: style.color,
               fillOpacity: 0.9,
@@ -311,7 +312,7 @@ export default function LeafletMap({
           center={[anchor.lat, anchor.lon]}
           radius={6}
           pathOptions={{
-            color: darken("#22d3ee"),
+            color: lighten("#22d3ee"),
             weight: 2,
             fillColor: "#22d3ee",
             fillOpacity: 0.9,
