@@ -3,10 +3,10 @@ import { notFound } from "next/navigation";
 
 import { isValidCoordinate } from "@r0ute/database";
 
-import type { RouteMarker } from "../../components/RouteMap";
-import { RouteView } from "../../components/RouteView";
-import { db } from "../../lib/db";
-import { type Anchor, describeHop, type Hop, resolveRoute } from "../../lib/resolve-route";
+import type { RouteMarker } from "../../../components/RouteMap.tsx";
+import { RouteView } from "../../../components/RouteView.tsx";
+import { db } from "../../../lib/db.ts";
+import { type Anchor, describeHop, type Hop, resolveRoute } from "../../../lib/resolve-route.ts";
 
 export const dynamic = "force-dynamic";
 
