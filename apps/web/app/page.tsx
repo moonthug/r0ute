@@ -1,10 +1,14 @@
 import { redirect } from "next/navigation";
 
+import { isPathSlug } from "@r0ute/database";
+
 async function openPath(formData: FormData) {
   "use server";
-  const id = String(formData.get("id") ?? "").trim();
-  if (/^\d{1,9}$/.test(id)) {
-    redirect(`/${id}`);
+  const id = String(formData.get("id") ?? "")
+    .trim()
+    .toLowerCase();
+  if (isPathSlug(id)) {
+    redirect(`/p/${id}`);
   }
 }
 
@@ -21,8 +25,7 @@ export default function HomePage() {
       <form action={openPath} className="flex gap-2">
         <input
           name="id"
-          inputMode="numeric"
-          pattern="[0-9]+"
+          pattern="[a-zA-Z0-9]{5,8}"
           required
           placeholder="path ID"
           aria-label="path request ID"

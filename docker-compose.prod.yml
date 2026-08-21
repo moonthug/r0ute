@@ -21,7 +21,7 @@ services:
       DATABASE_URL: postgresql://r0ute:${POSTGRES_PASSWORD:-r0ute}@postgres:5432/r0ute
       LOG_LEVEL: info
       # public URL of the web service below — shared in path reply messages
-      BASE_URL: ${BASE_URL:-http://localhost:3100/path}
+      BASE_URL: ${BASE_URL:-http://localhost:3100/p}
       # optional MeshRank observer uplink (https://meshrank.net) — set the IATA
       # code of your region to enable; defaults to the public broker
       # MESHRANK_IATA: MAN
