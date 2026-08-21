@@ -41,11 +41,15 @@ container.register<MeshRankOptions>(MESHRANK_OPTIONS, {
 // group-text responders
 container.register(RESPONDER, {
   useFactory: () =>
-    new PingResponder({
-      channels: env.PING_RESPONDER_CHANNELS,
-      keywords: env.PING_RESPONDER_COMMANDS,
-      location: env.BOT_LOCATION,
-    }),
+    new PingResponder(
+      {
+        channels: env.PING_RESPONDER_CHANNELS,
+        keywords: env.PING_RESPONDER_COMMANDS,
+        location: env.BOT_LOCATION,
+        baseUrl: env.BASE_URL,
+      },
+      container.resolve(PathRequestService),
+    ),
 });
 container.register(RESPONDER, {
   useFactory: () =>

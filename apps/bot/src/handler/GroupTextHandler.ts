@@ -92,7 +92,8 @@ export class GroupTextHandler implements Handler {
     }
 
     for (const responder of this.responders) {
-      const keywordMatch = responder.keywords?.some((keyword) => message.includes(keyword));
+      const keyword = responder.keywords.find((keyword) => message.includes(keyword));
+      const keywordMatch = !!keyword;
       const channelMatch = responder.channels.includes(channel.name);
 
       if (keywordMatch && channelMatch) {
@@ -102,7 +103,7 @@ export class GroupTextHandler implements Handler {
           data: {
             user,
             channel: channel.name,
-            keywords: responder.keywords,
+            keyword: keyword,
             location: position?.coord,
             timestamp: messageData.senderTimestamp,
           },
