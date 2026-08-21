@@ -35,10 +35,11 @@ export class PingResponder extends GroupResponderBase {
 
     let routeMessage = "";
 
-    // Direct and single-byte routes
     if (!route?.length || route[0]?.length === 2) {
+      // Direct and single-byte routes
       routeMessage = route.length === 0 ? "direct" : `${route.join(",")} (${route.length} hops)`;
     } else {
+      // Multi-byte routes
       const pathRequest = await this.pathRequestService.createPath({
         channelId: channel.id,
         userName: user,
