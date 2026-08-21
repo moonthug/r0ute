@@ -30,7 +30,7 @@ export class PingResponder extends GroupResponderBase {
     const { connection, channel, location, logger, route, timestamp, user } = context;
 
     const distanceMessage = location
-      ? `Distance: ${distance(this.location, location, { units: "miles" }).toFixed(1)}mi`
+      ? `\nDistance: ${distance(this.location, location, { units: "miles" }).toFixed(1)}mi`
       : "";
 
     let routeMessage = "";
@@ -46,10 +46,10 @@ export class PingResponder extends GroupResponderBase {
         path: route,
       });
 
-      routeMessage = `${this.baseUrl}/${pathRequest.slug}`;
+      routeMessage = `${this.baseUrl}/${pathRequest.slug}\nHops: ${route.length}`;
     }
 
-    const message = `@[${user}]\n⛰️ RX in Matlock️ ⛰️\nRoute: ${routeMessage}\n${distanceMessage}`;
+    const message = `@[${user}]\n⛰️ RX in Matlock️ ⛰️\nRoute: ${routeMessage}${distanceMessage}`;
     await connection.sendChannelTextMessage(channel.id, message);
 
     logger.debug({
