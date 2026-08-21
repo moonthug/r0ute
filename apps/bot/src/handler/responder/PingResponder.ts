@@ -30,7 +30,7 @@ export class PingResponder extends GroupResponderBase {
     const { connection, channel, location, logger, route, timestamp, user } = context;
 
     const distanceMessage = location
-      ? `\n${distance(this.location, location, { units: "miles" }).toFixed(1)} miles away`
+      ? `Distance: ${distance(this.location, location, { units: "miles" }).toFixed(1)}mi`
       : "";
 
     let routeMessage = "";

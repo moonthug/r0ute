@@ -41,7 +41,7 @@ export class PathResponder extends GroupResponderBase {
       path: route,
     });
 
-    const message = `@[${user}] ${this.baseUrl}/${pathRequest.slug}`;
+    const message = `@[${user}] Route: ${this.baseUrl}/${pathRequest.slug}`;
 
     await connection.sendChannelTextMessage(channel.id, message);
 
