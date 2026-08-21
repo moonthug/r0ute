@@ -1,6 +1,6 @@
 "use client";
 
-import type { MapAnchor, MapLocation, MapPath } from "@r0ute/ui/map";
+import type { MapAnchor, MapDestination, MapLocation, MapPath } from "@r0ute/ui/map";
 import nextDynamic from "next/dynamic";
 
 // leaflet touches `window` at import time, so the map must never render on the server
@@ -13,16 +13,19 @@ export function RouteView({
   locations,
   paths,
   anchor,
+  destination,
 }: {
   locations: MapLocation[];
   paths: MapPath[];
   anchor: MapAnchor | null;
+  destination: MapDestination | null;
 }) {
   return (
     <LeafletMap
       locations={locations}
       paths={paths}
       anchor={anchor}
+      destination={destination}
       // the hop table overlay carries the route details instead
       interactivePaths={false}
       fitPadding={48}

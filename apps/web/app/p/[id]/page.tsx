@@ -1,4 +1,4 @@
-import type { MapAnchor, MapLocation, MapPath } from "@r0ute/ui/map";
+import type { MapAnchor, MapDestination, MapLocation, MapPath } from "@r0ute/ui/map";
 import { type Hop, resolveRoute } from "@r0ute/ui/resolve-route";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -19,6 +19,19 @@ export async function generateMetadata({ params }: PathPageProps) {
 }
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// every monitored channel funnels into the bot's receiver behind this repeater,
+// so all routes end there; its live DB record tracks the node as it re-adverts
+const RECEIVER_PUBLIC_KEY =
+  process.env.RECEIVER_PUBLIC_KEY ??
+  "fa0c61aaf6d550cce54e8ad8a5133148b2d63d92d14320a72009c4a01fd34a18";
+
+// Matlock, where the receiver lives — used only if its node is missing from the DB
+const FALLBACK_DESTINATION: MapDestination = {
+  lat: 53.1442947,
+  lon: -1.5428249,
+  name: "Matlock",
+};
 
 export default async function PathRequestPage({ params }: PathPageProps) {
   const { id } = await params;
@@ -43,7 +56,7 @@ export default async function PathRequestPage({ params }: PathPageProps) {
   // hops are truncated key prefixes, so candidates are looked up live rather
   // than trusting the single resolution stored at write time — nodes heard
   // since then sharpen the picture
-  const [candidateRows, senderRows] = await Promise.all([
+  const [candidateRows, senderRows, receiverRow] = await Promise.all([
     prefixes.length
       ? db.location.findMany({
           where: { OR: prefixes.map((prefix) => ({ publicKey: { startsWith: prefix } })) },
@@ -54,9 +67,15 @@ export default async function PathRequestPage({ params }: PathPageProps) {
     senderHop
       ? Promise.resolve([])
       : db.location.findMany({ where: { name: pathRequest.userName } }),
+    db.location.findUnique({ where: { publicKey: RECEIVER_PUBLIC_KEY } }),
   ]);
 
   const validRows = candidateRows.filter((row) => isValidCoordinate(row.lat, row.lon));
+
+  const destination: MapDestination =
+    receiverRow && isValidCoordinate(receiverRow.lat, receiverRow.lon)
+      ? { lat: receiverRow.lat, lon: receiverRow.lon, name: receiverRow.name ?? "Matlock" }
+      : FALLBACK_DESTINATION;
 
   const hops: Hop[] = prefixes.map((prefix) => ({
     prefix,
@@ -84,7 +103,12 @@ export default async function PathRequestPage({ params }: PathPageProps) {
     ? { prefix: sender.publicKey.slice(0, senderPrefixLength), name: pathRequest.userName }
     : null;
 
-  const route = resolveRoute(hops, anchor);
+  const route = resolveRoute(hops, anchor, destination);
+
+  // when the route already ends at the receiver node, its own marker is the
+  // endpoint — the extra red point (and its leg, already zero-length) is noise
+  const endsAtReceiver =
+    receiverRow !== null && route.hops.at(-1)?.chosen?.publicKey === receiverRow.publicKey;
 
   // client components need serializable props — Dates become ISO strings
   const locations: MapLocation[] = [
@@ -127,7 +151,12 @@ export default async function PathRequestPage({ params }: PathPageProps) {
         </span>
       </header>
       <div className="relative min-h-0 flex-1">
-        <RouteView locations={locations} paths={paths} anchor={anchor} />
+        <RouteView
+          locations={locations}
+          paths={paths}
+          anchor={anchor}
+          destination={endsAtReceiver ? null : destination}
+        />
         <RouteTable hops={route.hops} sender={tableSender} />
       </div>
     </main>

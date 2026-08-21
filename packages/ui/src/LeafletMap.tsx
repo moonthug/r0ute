@@ -56,6 +56,13 @@ export type MapAnchor = {
   name: string;
 };
 
+/** The receiver's fixed position, drawn in red at the end of every route. */
+export type MapDestination = {
+  lat: number;
+  lon: number;
+  name: string;
+};
+
 /**
  * Frame the initial viewport around the markers, once. A mean-of-coordinates
  * centre lets a single far-flung node drag the view into open sea; the bounding
@@ -76,7 +83,10 @@ function FitToMarkers({
   useEffect(() => {
     if (fitted || positions.length === 0) return;
     setFitted(true);
-    map.fitBounds(positions, { padding: [padding, padding], maxZoom });
+    // the flex layout may settle after leaflet measured its container, and a
+    // stale size makes fitBounds compute the wrong zoom and centre
+    map.invalidateSize();
+    map.fitBounds(positions, { padding: [padding, padding], maxZoom, animate: false });
   }, [map, fitted, positions, padding, maxZoom]);
   return null;
 }
@@ -145,6 +155,7 @@ export default function LeafletMap({
   pulses = {},
   paths,
   anchor = null,
+  destination = null,
   interactivePaths = true,
   fitPadding = 32,
   fitMaxZoom = 11,
@@ -154,6 +165,7 @@ export default function LeafletMap({
   pulses?: Record<string, number>;
   paths: MapPath[];
   anchor?: MapAnchor | null;
+  destination?: MapDestination | null;
   /** hover tooltips and pointer events on the route lines */
   interactivePaths?: boolean;
   fitPadding?: number;
@@ -165,6 +177,7 @@ export default function LeafletMap({
   const framed: [number, number][] = [
     ...locations.map((location): [number, number] => [location.lat, location.lon]),
     ...(anchor ? [[anchor.lat, anchor.lon] as [number, number]] : []),
+    ...(destination ? [[destination.lat, destination.lon] as [number, number]] : []),
   ];
 
   return (
@@ -319,6 +332,25 @@ export default function LeafletMap({
             <strong>{anchor.name}</strong>
             <br />
             Sender
+          </Popup>
+        </CircleMarker>
+      )}
+      {destination && (
+        <CircleMarker
+          center={[destination.lat, destination.lon]}
+          radius={6}
+          pathOptions={{
+            color: lighten("#f87171"),
+            weight: 2,
+            fillColor: "#f87171",
+            fillOpacity: 0.9,
+            className: "node-marker",
+          }}
+        >
+          <Popup>
+            <strong>{destination.name}</strong>
+            <br />
+            Receiver
           </Popup>
         </CircleMarker>
       )}

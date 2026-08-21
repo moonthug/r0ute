@@ -174,7 +174,11 @@ function toSegments(points: PathPoint[], idPrefix: string): SegmentDraft[] {
   return segments;
 }
 
-function buildSegments(hops: ResolvedHop[], anchor: Anchor | null): RouteSegment[] {
+function buildSegments(
+  hops: ResolvedHop[],
+  anchor: Anchor | null,
+  destination: Anchor | null,
+): RouteSegment[] {
   const runs: PathPoint[][] = [];
   // the sender anchor is a display-name match, never a key match, so its leg is
   // always drawn as a guess
@@ -196,6 +200,12 @@ function buildSegments(hops: ResolvedHop[], anchor: Anchor | null): RouteSegment
       ambiguous: false,
     });
   }
+  // the receiver's position is fixed, but the leg into it was heard off-air
+  // rather than recorded in the route, so it draws dashed like the sender leg;
+  // a trailing unknown hop breaks the chain and leaves the point standing alone
+  if (destination && current.length > 0) {
+    current.push({ position: [destination.lat, destination.lon], ambiguous: true });
+  }
   if (current.length > 1) runs.push(current);
 
   return runs
@@ -209,6 +219,7 @@ function buildAlternatives(
   hops: Hop[],
   chosenByIndex: Map<number, Candidate>,
   anchor: Anchor | null,
+  destination: Anchor | null,
 ): AlternativeEdge[] {
   const edges: AlternativeEdge[] = [];
 
@@ -231,6 +242,16 @@ function buildAlternatives(
     for (const [index, candidate] of first.candidates.entries()) {
       if (candidate === chosen) continue;
       push(`alt-anchor-${index}`, anchor, candidate);
+    }
+  }
+
+  // every last-hop candidate the chain did not pick fans into the receiver
+  const last = hops.at(-1);
+  if (destination && last) {
+    const chosen = chosenByIndex.get(hops.length - 1);
+    for (const [index, candidate] of last.candidates.entries()) {
+      if (candidate === chosen) continue;
+      push(`alt-destination-${index}`, candidate, destination);
     }
   }
 
@@ -258,8 +279,14 @@ function buildAlternatives(
  * Resolve a route's hops to concrete nodes and the polylines that draw them.
  * `anchor` is the sender's position when it could be identified; it seeds the
  * first run only, since a gap means the chain restarts from nothing known.
+ * `destination` is the receiver's fixed position; the last run's final leg is
+ * drawn into it.
  */
-export function resolveRoute(hops: Hop[], anchor: Anchor | null = null): ResolvedRoute {
+export function resolveRoute(
+  hops: Hop[],
+  anchor: Anchor | null = null,
+  destination: Anchor | null = null,
+): ResolvedRoute {
   const chosenByIndex = new Map<number, Candidate>();
   let run: number[] = [];
   let anchorAvailable = anchor !== null;
@@ -296,8 +323,8 @@ export function resolveRoute(hops: Hop[], anchor: Anchor | null = null): Resolve
 
   return {
     hops: resolved,
-    segments: buildSegments(resolved, anchor),
-    alternatives: buildAlternatives(hops, chosenByIndex, anchor),
+    segments: buildSegments(resolved, anchor, destination),
+    alternatives: buildAlternatives(hops, chosenByIndex, anchor, destination),
   };
 }
 
